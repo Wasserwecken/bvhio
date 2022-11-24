@@ -1,4 +1,3 @@
-from io import TextIOWrapper
 import os
 import errno
 
@@ -22,16 +21,10 @@ def deserialize(path:str) -> BVH:
             debugInfo = (file, lineNumber, len(line) - len(line.lstrip()) + len(tokens[0]), line)
 
             if tokens[0] == 'ROOT' or tokens[0] == 'JOINT':
-                newJoint = Joint(currentJoint, deserializeJoint(tokens[1:], debugInfo))
-
-                if not currentJoint:
-                    currentJoint = newJoint
-                elif (not currentJoint.Children):
-                    currentJoint.Children = [newJoint]
-                else:
-                    currentJoint.Children.append(newJoint)
+                newJoint = Joint(deserializeJoint(tokens[1:], debugInfo))
+                if currentJoint is not None:
+                    currentJoint.append(newJoint)
                 currentJoint = newJoint
-
                 if not file.readline().strip() == '{':
                     raise SyntaxError('Joint header must follow a "{" line', debugInfo)
 
@@ -46,9 +39,36 @@ def deserialize(path:str) -> BVH:
                     pass
 
             elif tokens[0] == '}':
-                if not currentJoint:
+                if currentJoint is None:
                     raise SyntaxError('Root joint is already closed', debugInfo)
-                currentJoint = currentJoint.Parent
+                if currentJoint.Parent is None:
+                    result.Hierarchy = currentJoint
+                    break
+                else:
+                    currentJoint = currentJoint.Parent
+        result.Hierarchy.validate(True)
+
+        lineNumber += 1
+        motionLine = file.readline().strip()
+        if not motionLine == 'MOTION':
+            raise SyntaxError('After end of hierarchy must follow "MOTION"', (file, lineNumber, 1, motionLine))
+
+        keyframes = []
+        for line in file:
+            lineNumber += 1
+            tokens = line.strip().split()
+            debugInfo = (file, lineNumber, len(line) - len(line.lstrip()) + len(tokens[0]), line)
+
+            if 'Frames' in tokens[0]:
+                pass
+            elif len(tokens) == 3 and tokens[0] == 'Frame':
+                result.FrameTime = deserializeFrameTime(tokens[2:], debugInfo)
+            else:
+                keyframes.append(deserializeKeyframe(tokens, debugInfo))
+        result.Motion = numpy.array(keyframes)
+
+        result.validate(True)
+        return result
 
 
 def deserializeJoint(data:list, debugInfo:tuple) -> str:
@@ -57,16 +77,34 @@ def deserializeJoint(data:list, debugInfo:tuple) -> str:
     return data[0]
 
 def deserializeChannles(data:list, debugInfo:tuple) -> list[str]:
-    if not isinstance(data, list):
+    if not isinstance(data, list) or len(data) < 1:
         raise SyntaxError('Channels must be at least a 1-dimensional tuple', debugInfo)
-    if not int(data[0]) == len(data) - 1:
+    try:
+        data[0] = int(data[0])
+    except ValueError:
+        raise SyntaxError(f'Channel count must be numerical', debugInfo)
+    if not data[0] == len(data) - 1:
         raise SyntaxError(f'Channel count mismatch with labels', debugInfo)
     return data[1:]
 
 def deserializeOffset(data:list, debugInfo:tuple) -> numpy.ndarray:
     if not isinstance(data, list) or len(data) != 3:
         raise SyntaxError('Offset must be a 3-dimensional tuple', debugInfo)
-    data = list(map(float, data))
-    if not all([isinstance(item, float) for item in data]):
+    try:
+        return numpy.array(list(map(float, data)))
+    except ValueError:
         raise SyntaxError('Offset must be numerics only', debugInfo)
-    return numpy.array(data)
+
+def deserializeFrameTime(data:list, debugInfo:tuple) -> float:
+    if not isinstance(data, list) or len(data) != 1:
+        raise SyntaxError('Frame time must be a 1-dimensional tuple', debugInfo)
+    try:
+        return float(data[0])
+    except ValueError:
+        raise SyntaxError('Frame time be numerical', debugInfo)
+
+def deserializeKeyframe(data:list, debugInfo:tuple) -> numpy.ndarray:
+    try:
+        return numpy.array(list(map(float, data)))
+    except ValueError:
+        raise SyntaxError('Keyframe must be numerics only', debugInfo)
