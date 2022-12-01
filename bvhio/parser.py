@@ -1,5 +1,6 @@
 import os
 import errno
+import glm
 
 from .bvh import *
 
@@ -29,7 +30,7 @@ def deserialize(path:str) -> BVH:
                     raise SyntaxError('Joint header must follow a "{" line', debugInfo)
 
             elif tokens[0] == 'OFFSET':
-                currentJoint.Offset = deserializeOffset(tokens[1:], debugInfo)
+                currentJoint.Position = glm.vec3(deserializeOffset(tokens[1:], debugInfo))
 
             elif tokens[0] == 'CHANNELS':
                 currentJoint.Channels = deserializeChannles(tokens[1:], debugInfo)

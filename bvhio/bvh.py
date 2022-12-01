@@ -1,34 +1,14 @@
 import numpy
+from .transform import *
 
-class Joint:
-    Parent:object
+class Joint(Transform):
     Name:str
-    Offset:numpy.ndarray
     Channels:list[str]
-    Children:list
 
     def __init__(self, name:str) -> None:
-        self.Parent = None
+        super().__init__()
         self.Name = name
-        self.Offset = None
         self.Channels = []
-        self.Children = []
-
-    def append(self, joint:object):
-        if joint is self:
-            raise ValueError(f'Joint "{self.Name}" cannot be parent of itself')
-        if joint.Parent is not None:
-            joint.Parent.remove(joint)
-        joint.Parent = self
-        self.Children.append(joint)
-
-    def remove(self, joint:object) -> bool:
-        try:
-            self.Children.remove(joint)
-            joint.Parent = None
-            return True
-        except ValueError:
-            return False
 
     def indicies(self) -> list[str]:
         result = [self.Name]
@@ -43,13 +23,10 @@ class Joint:
         invalidChannels = self.Channels is None or len(self.Channels) == 0
         if invalidChannels and raiseExceptions:
             raise ValueError(f'Joint "{self.Name}" is missing channel information -> {self.Channels}')
-        invalidOffset = self.Offset is None or len(self.Offset) != 3
-        if invalidOffset and raiseExceptions:
-            raise ValueError(f'Joint "{self.Name}" is missing offset information and must be 3-dimensional -> {self.Offset}')
         for child in self.Children:
             if not child.validate(raiseExceptions):
                 return False
-        return not (invalidChannels or invalidOffset)
+        return not invalidChannels
 
     def __repr__(self) -> str:
         return f"{self.Name}"

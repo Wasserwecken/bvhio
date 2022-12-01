@@ -18,4 +18,3 @@ pass
 
 # scale
 # why? -> lower values may be better for NN
-
