@@ -1,2 +1,2 @@
 from .bvh import *
-from .parser import deserialize
+from .parser import read, write

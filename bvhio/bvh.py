@@ -1,7 +1,10 @@
 import numpy
+import glm
 from .transform import *
+from .angles import *
 
 class Joint(Transform):
+    Offset:glm.vec3
     Name:str
     Channels:list[str]
 
@@ -10,14 +13,45 @@ class Joint(Transform):
         self.Name = name
         self.Channels = []
 
-    def indicies(self) -> list[str]:
-        result = [self.Name]
+    def layout(self, startIndex:int = 0) -> list[tuple[object, int, int]]:
+        endIndex = startIndex+len(self.Channels)
+        result = [[self, startIndex, endIndex]]
+
         for child in self.Children:
-            result.extend(child.indicies())
+            result.extend(child.layout(result[-1][2]))
         return result
 
-    def index(self, name:str) -> int:
-        return self.indicies().index(name)
+    def serialize(self) -> numpy.ndarray:
+        result:list[int] = []
+
+        rotation = glm.vec3()
+        rotCurrent = self.Orientation
+        rotOrder = [rot[0] for rot in reversed(self.Channels) if rot[1:] == 'rotation']
+        for axis in rotOrder:
+            if axis == 'X': rotation.x = glm.eulerAngles(rotCurrent).x; rotCurrent = glm.rotate(rotCurrent, -rotation.x, (1.0, 0.0, 0.0)); continue
+            if axis == 'Y': rotation.y = glm.eulerAngles(rotCurrent).y; rotCurrent = glm.rotate(rotCurrent, -rotation.y, (0.0, 1.0, 0.0)); continue
+            if axis == 'Z': rotation.z = glm.eulerAngles(rotCurrent).z; rotCurrent = glm.rotate(rotCurrent, -rotation.z, (0.0, 0.0, 1.0)); continue
+        for channel in self.Channels:
+            if 'Xposition' == channel: result.append(self.Position.x); continue
+            if 'Yposition' == channel: result.append(self.Position.y); continue
+            if 'Zposition' == channel: result.append(self.Position.z); continue
+            if 'Xrotation' == channel: result.append(glm.degrees(rotation.x)); continue
+            if 'Yrotation' == channel: result.append(glm.degrees(rotation.y)); continue
+            if 'Zrotation' == channel: result.append(glm.degrees(rotation.z)); continue
+        return numpy.array(result)
+
+    def deserialize(self, data:numpy.ndarray) -> None:
+        position = self.Offset
+        rotation = glm.quat()
+        for (index, channel) in enumerate(self.Channels):
+            if 'Xposition' == channel: position.x = data[index]; continue
+            if 'Yposition' == channel: position.y = data[index]; continue
+            if 'Zposition' == channel: position.z = data[index]; continue
+            if 'Xrotation' == channel: rotation = glm.rotate(rotation, glm.radians(data[index]), (1.0, 0.0, 0.0)); continue
+            if 'Yrotation' == channel: rotation = glm.rotate(rotation, glm.radians(data[index]), (0.0, 1.0, 0.0)); continue
+            if 'Zrotation' == channel: rotation = glm.rotate(rotation, glm.radians(data[index]), (0.0, 0.0, 1.0)); continue
+        self.Position = position
+        self.Orientation = rotation
 
     def validate(self, raiseExceptions:bool = False) -> bool:
         invalidChannels = self.Channels is None or len(self.Channels) == 0
@@ -27,9 +61,6 @@ class Joint(Transform):
             if not child.validate(raiseExceptions):
                 return False
         return not invalidChannels
-
-    def __repr__(self) -> str:
-        return f"{self.Name}"
 
 class BVH:
     Hierarchy:Joint
@@ -43,7 +74,7 @@ class BVH:
 
     @property
     def Frames(self):
-        return len(self.Motion) if self.Motion else 0
+        return self.Motion.shape[0] if self.Motion is not None else 0
 
     def validate(self, raiseExceptions:bool = False) -> bool:
         invalidHierarchy = self.Hierarchy is None or not self.Hierarchy.validate(raiseExceptions)
@@ -58,7 +89,22 @@ class BVH:
         invalidKeyFrameShape = len(self.Motion.shape) != 2
         if invalidKeyFrameShape and raiseExceptions:
             raise ValueError(f'Motion data is not 2-dimensional -> {self.Motion.shape}')
-        invalidKeyFrameSize = self.Motion.shape[1] == len(self.Hierarchy.indicies())
+        invalidKeyFrameSize = self.Motion.shape[1] == len(self.Hierarchy.layout())
         if invalidKeyFrameSize and raiseExceptions:
-            raise ValueError(f'Motion data does not match hierarchy size -> {self.Motion.shape[1]} != {len(self.Hierarchy.indicies())}')
+            raise ValueError(f'Motion data does not match hierarchy size -> {self.Motion.shape[1]} != {len(self.Hierarchy.layout(0))}')
         return not (invalidHierarchy or invalidKeyFrames or invalidKeyFrameShape or invalidKeyFrameSize)
+
+    def setAsHierarchy(self, joint:Joint, orientation:glm.quat = glm.quat()) -> None:
+        if 'Xposition' in joint.Channels: joint.Offset.x = joint.Position.x
+        if 'Yposition' in joint.Channels: joint.Offset.y = joint.Position.y
+        if 'Zposition' in joint.Channels: joint.Offset.z = joint.Position.z
+        joint.Offset = orientation * joint.Offset
+        orientation = orientation * joint.Orientation
+        for child in joint.Children:
+            self.setAsHierarchy(child, orientation)
+
+    def readPose(self, frame:int) -> Joint:
+        layout = self.Hierarchy.layout()
+        for (joint, start, end) in layout:
+            joint.deserialize(self.Motion[frame, start:end])
+        return self.Hierarchy

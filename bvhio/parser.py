@@ -1,10 +1,35 @@
 import os
-import errno
 import glm
-
+import errno
 from .bvh import *
+from io import TextIOWrapper
 
-def deserialize(path:str) -> BVH:
+
+def write(path:str, bvh:BVH) -> None:
+    with open(path, "w") as file:
+        file.write('HIERARCHY\n')
+        writeJoint(file, bvh.Hierarchy, 0, True)
+
+        file.write('MOTION\n')
+        file.write(f'Frames: {bvh.Frames}\n')
+        file.write(f'Frame Time: {bvh.FrameTime}\n')
+
+        for frame in bvh.Motion:
+            stringNumbers = [f'{n}' for n in frame]
+            file.write(f'{" ".join(stringNumbers)}\n')
+
+def writeJoint(file:TextIOWrapper, joint:Joint, indent:int, isFirst:bool) -> None:
+    tab = '\t'
+    file.write(f'{tab*indent}{"ROOT" if isFirst else "JOINT"} {joint.Name}\n')
+    file.write(f'{tab*indent}{{\n')
+    file.write(f'{tab*(indent+1)}OFFSET {joint.Offset.x} {joint.Offset.y} {joint.Offset.z}\n')
+    file.write(f'{tab*(indent+1)}CHANNELS {len(joint.Channels)} {" ".join(joint.Channels)}\n')
+    for child in joint.Children:
+        writeJoint(file, child, indent+1, False)
+    file.write(f'{tab*indent}}}\n')
+
+
+def read(path:str) -> BVH:
     if not os.path.exists(path):
         raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), path)
 
@@ -30,7 +55,7 @@ def deserialize(path:str) -> BVH:
                     raise SyntaxError('Joint header must follow a "{" line', debugInfo)
 
             elif tokens[0] == 'OFFSET':
-                currentJoint.Position = glm.vec3(deserializeOffset(tokens[1:], debugInfo))
+                currentJoint.Offset = glm.vec3(deserializeOffset(tokens[1:], debugInfo))
 
             elif tokens[0] == 'CHANNELS':
                 currentJoint.Channels = deserializeChannles(tokens[1:], debugInfo)
