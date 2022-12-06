@@ -4,7 +4,7 @@ import numpy
 numpy.set_printoptions(precision=2)
 numpy.set_printoptions(suppress=True)
 
-result = bvhio.read('file1.bvh')
+result = bvhio.read('file2.bvh')
 
 for (joint, _, _) in result.readPose(0).layout():
     print(joint.Position, joint.Euler, joint.Name)

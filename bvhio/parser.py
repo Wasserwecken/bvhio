@@ -91,7 +91,10 @@ def read(path:str) -> BVH:
                 result.FrameTime = deserializeFrameTime(tokens[2:], debugInfo)
             else:
                 keyframes.append(deserializeKeyframe(tokens, debugInfo))
+
         result.Motion = numpy.array(keyframes)
+        for (joint, start, end) in result.Hierarchy.layout():
+            joint.Motion = result.Motion[:, start:end]
 
         result.validate(True)
         return result
