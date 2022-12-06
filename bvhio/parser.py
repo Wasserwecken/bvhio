@@ -22,7 +22,7 @@ def writeJoint(file:TextIOWrapper, joint:Joint, indent:int, isFirst:bool) -> Non
     tab = '\t'
     file.write(f'{tab*indent}{"ROOT" if isFirst else "JOINT"} {joint.Name}\n')
     file.write(f'{tab*indent}{{\n')
-    file.write(f'{tab*(indent+1)}OFFSET {joint.Offset.x} {joint.Offset.y} {joint.Offset.z}\n')
+    file.write(f'{tab*(indent+1)}OFFSET {joint.Position.x} {joint.Position.y} {joint.Position.z}\n')
     file.write(f'{tab*(indent+1)}CHANNELS {len(joint.Channels)} {" ".join(joint.Channels)}\n')
     for child in joint.Children:
         writeJoint(file, child, indent+1, False)
@@ -55,7 +55,7 @@ def read(path:str) -> BVH:
                     raise SyntaxError('Joint header must follow a "{" line', debugInfo)
 
             elif tokens[0] == 'OFFSET':
-                currentJoint.Offset = glm.vec3(deserializeOffset(tokens[1:], debugInfo))
+                currentJoint.Position = glm.vec3(deserializeOffset(tokens[1:], debugInfo))
 
             elif tokens[0] == 'CHANNELS':
                 currentJoint.Channels = deserializeChannles(tokens[1:], debugInfo)

@@ -4,9 +4,7 @@ from .transform import *
 from .angles import *
 
 class Joint(Transform):
-    Offset:glm.vec3
     Motion:numpy.ndarray
-    Name:str
     Channels:list[str]
 
     def __init__(self, name:str) -> None:
@@ -42,7 +40,6 @@ class Joint(Transform):
         return numpy.array(result)
 
     def deserialize(self, data:numpy.ndarray) -> None:
-        self.Position = self.Offset
         self.Orientation = glm.quat()
         for (index, channel) in enumerate(self.Channels):
             if 'Xposition' == channel: self.Position.x = data[index]; continue
@@ -62,11 +59,7 @@ class Joint(Transform):
         return not invalidChannels
 
     def setOffsetByTransform(self, orientation:glm.quat = glm.quat()):
-        if 'Xposition' in self.Channels: self.Offset.x = self.Position.x
-        if 'Yposition' in self.Channels: self.Offset.y = self.Position.y
-        if 'Zposition' in self.Channels: self.Offset.z = self.Position.z
-
-        self.Offset = orientation * self.Offset
+        self.Position = orientation * self.Position
         orientation = orientation * self.Orientation
         for child in self.Children:
             child.setOffsetByTransform(orientation)
