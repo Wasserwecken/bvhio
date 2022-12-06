@@ -122,15 +122,35 @@ class Transform:
         node.Parent = self
         self._Children.append(node)
 
-    def remove(self, node:object) -> bool:
-        try:
-            self._Children.remove(node)
-            node.Parent = None
-            return True
-        except ValueError:
-            return False
+    # def remove(self, node:object) -> bool:
+    #     try:
+    #         self._Children.remove(node)
+    #         node.Parent = None
+    #         return True
+    #     except ValueError:
+    #         return False
 
-    def clearChildren(self) -> None:
+    # def clearChildren(self) -> None:
+    #     for child in self.Children:
+    #         child.Parent = None
+    #     self._Children.clear()
+
+    def applyPosition(self, recursive:bool = False):
         for child in self.Children:
-            child.Parent = None
-        self._Children.clear()
+            child.Position = self.Position + (self.Space[:3, :3] * child.Position)
+            if recursive: child.applyPosition(recursive)
+        self.Position = glm.vec3(0)
+
+    def applyRotation(self, recursive:bool = False):
+        for child in self.Children:
+            child.Position = self.Orientation * child.Position
+            child.Orientation = self.Orientation * child.Orientation
+            if recursive: child.applyRotation(recursive)
+        self.Orientation = glm.quat()
+
+    def applyScale(self, recursive:bool = False):
+        for child in self.Children:
+            child.Position = self.Scale * child.Position
+            child.Scale = self.Scale * child.Scale
+            if recursive: child.applyScale(recursive)
+        self.Scale = glm.vec3(1)

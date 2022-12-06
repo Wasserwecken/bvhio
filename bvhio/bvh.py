@@ -58,12 +58,6 @@ class Joint(Transform):
                 return False
         return not invalidChannels
 
-    def setOffsetByTransform(self, orientation:glm.quat = glm.quat()):
-        self.Position = orientation * self.Position
-        orientation = orientation * self.Orientation
-        for child in self.Children:
-            child.setOffsetByTransform(orientation)
-
 class BVH:
     Hierarchy:Joint
     Motion:numpy.ndarray
@@ -108,6 +102,7 @@ class BVH:
             raise ValueError(f'Hierarchy channel count does not match motion data length -> {layout[-1][-1]} != {self.Motion.shape[1]}')
 
         self.Hierarchy = root
-        self.Hierarchy.setOffsetByTransform()
+        self.Hierarchy.applyRotation(True)
+        self.Hierarchy.applyScale(True)
 
 
