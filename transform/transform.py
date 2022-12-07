@@ -1,4 +1,5 @@
 import glm
+import transform as tr
 
 class Transform:
     @property
@@ -64,14 +65,6 @@ class Transform:
         self._IsOutdatedLocal = True
 
     @property
-    def Euler(self) -> glm.vec3:
-        return glm.degrees(glm.eulerAngles(self._Orientation))
-    @Euler.setter
-    def Euler(self, value:glm.vec3) -> None:
-        self._Orientation = glm.radians(glm.quat(value))
-        self._IsOutdatedLocal = True
-
-    @property
     def Forward(self) -> glm.vec3:
         return self._Orientation * glm.vec3(0, 0, 1)
 
@@ -114,6 +107,10 @@ class Transform:
             + f"\nChildren: {len(self._Children)}"
         )
 
+    def GetEuler(self, order:str = 'ZXY') -> glm.vec3:
+        return glm.degrees(glm.vec3(tr.euler.to(glm.transpose(glm.mat3_cast(self.Orientation)), order)))
+
+
     def append(self, node:object) -> None:
         if node is self:
             raise ValueError(f'Joint "{self.Name}" cannot be parent of itself')
@@ -135,22 +132,9 @@ class Transform:
     #         child.Parent = None
     #     self._Children.clear()
 
-    def applyPosition(self, recursive:bool = False):
-        for child in self.Children:
-            child.Position = self.Position + (self.Space[:3, :3] * child.Position)
-            if recursive: child.applyPosition(recursive)
-        self.Position = glm.vec3(0)
-
     def applyRotation(self, recursive:bool = False):
         for child in self.Children:
             child.Position = self.Orientation * child.Position
             child.Orientation = self.Orientation * child.Orientation
             if recursive: child.applyRotation(recursive)
         self.Orientation = glm.quat()
-
-    def applyScale(self, recursive:bool = False):
-        for child in self.Children:
-            child.Position = self.Scale * child.Position
-            child.Scale = self.Scale * child.Scale
-            if recursive: child.applyScale(recursive)
-        self.Scale = glm.vec3(1)

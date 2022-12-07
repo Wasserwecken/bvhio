@@ -1,33 +1,39 @@
 import os
 import glm
+import numpy
 import errno
 from .bvh import *
 from io import TextIOWrapper
 
 
-def write(path:str, bvh:BVH) -> None:
+def write(path:str, bvh:BVH, percision:int = 5) -> None:
+    bvh.Hierarchy.readOrigin()
     with open(path, "w") as file:
         file.write('HIERARCHY\n')
-        writeJoint(file, bvh.Hierarchy, 0, True)
+        writeJoint(file, bvh.Hierarchy, 0, True, percision)
 
         file.write('MOTION\n')
         file.write(f'Frames: {bvh.Frames}\n')
         file.write(f'Frame Time: {bvh.FrameTime}\n')
 
-        for frame in bvh.Motion:
+        for frame in numpy.round(bvh.Motion, percision):
             stringNumbers = [f'{n}' for n in frame]
             file.write(f'{" ".join(stringNumbers)}\n')
 
-def writeJoint(file:TextIOWrapper, joint:Joint, indent:int, isFirst:bool) -> None:
-    tab = '\t'
+def writeJoint(file:TextIOWrapper, joint:Joint, indent:int, isFirst:bool, percision:int = 9) -> None:
+    offset = glm.quat(joint.SpaceParent) * joint.Position
+
+    tab = '  '
     file.write(f'{tab*indent}{"ROOT" if isFirst else "JOINT"} {joint.Name}\n')
     file.write(f'{tab*indent}{{\n')
-    file.write(f'{tab*(indent+1)}OFFSET {joint.Position.x} {joint.Position.y} {joint.Position.z}\n')
+    file.write(f'{tab*(indent+1)}OFFSET {round(offset.x, percision)} {round(offset.y ,percision)} {round(offset.z, percision)}\n')
     file.write(f'{tab*(indent+1)}CHANNELS {len(joint.Channels)} {" ".join(joint.Channels)}\n')
-    for child in joint.Children:
-        writeJoint(file, child, indent+1, False)
+    if len(joint.Children) > 0:
+        for child in joint.Children:
+            writeJoint(file, child, indent+1, False, percision)
+    else:
+        file.write(f'{tab*(indent+1)}End Site\n{tab*(indent+1)}{{\n{tab*(indent+2)}OFFSET 0.0 0.0 0.0\n{tab*(indent+1)}}}\n')
     file.write(f'{tab*indent}}}\n')
-
 
 def read(path:str) -> BVH:
     if not os.path.exists(path):
@@ -56,6 +62,7 @@ def read(path:str) -> BVH:
 
             elif tokens[0] == 'OFFSET':
                 currentJoint.Position = glm.vec3(deserializeOffset(tokens[1:], debugInfo))
+                currentJoint.Origin = [currentJoint.Position, glm.quat()]
 
             elif tokens[0] == 'CHANNELS':
                 currentJoint.Channels = deserializeChannles(tokens[1:], debugInfo)
@@ -72,7 +79,6 @@ def read(path:str) -> BVH:
                     break
                 else:
                     currentJoint = currentJoint.Parent
-        result.Hierarchy.validate(True)
 
         lineNumber += 1
         motionLine = file.readline().strip()
@@ -92,11 +98,10 @@ def read(path:str) -> BVH:
             else:
                 keyframes.append(deserializeKeyframe(tokens, debugInfo))
 
-        result.Motion = numpy.array(keyframes)
+        motion = numpy.array(keyframes)
         for (joint, start, end) in result.Hierarchy.layout():
-            joint.Motion = result.Motion[:, start:end]
+            joint.deserializeMotion(motion[:, start:end])
 
-        result.validate(True)
         return result
 
 
