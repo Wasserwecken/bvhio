@@ -28,7 +28,7 @@ class Joint(tr.Transform):
             resultData:list[float] = []
             rotOrder = ''.join([rot[0] for rot in self.Channels if rot[1:] == 'rotation'])
             rotMat = glm.transpose(glm.mat3_cast(orientation))
-            rotation = glm.degrees(glm.vec3(tr.to(rotMat, rotOrder)))
+            rotation = glm.degrees(glm.vec3(tr.euler.fromMatTo(rotMat, rotOrder)))
             for channel in self.Channels:
                 if 'Xposition' == channel: resultData.append(position.x); continue
                 if 'Yposition' == channel: resultData.append(position.y); continue

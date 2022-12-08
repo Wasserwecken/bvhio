@@ -108,7 +108,7 @@ class Transform:
         )
 
     def GetEuler(self, order:str = 'ZXY') -> glm.vec3:
-        return glm.degrees(glm.vec3(tr.euler.to(glm.transpose(glm.mat3_cast(self.Orientation)), order)))
+        return glm.degrees(glm.vec3(tr.euler.fromMatTo(glm.transpose(glm.mat3_cast(self.Orientation)), order)))
 
 
     def append(self, node:object) -> None:
