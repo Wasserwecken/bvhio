@@ -2,87 +2,92 @@ import numpy
 import glm
 import transform as tr
 
+class Keyframe:
+    @property
+    def Position(self) -> glm.vec3:
+        return self._Position
+    @Position.setter
+    def Position(self, value:glm.vec3) -> None:
+        self._Position = glm.vec3(value)
+
+    @property
+    def Orientation(self) -> glm.quat:
+        return self._Orientation
+    @Orientation.setter
+    def Orientation(self, value:glm.quat) -> None:
+        self._Orientation = glm.quat(value)
+
+    def __init__(self, position:glm.vec3 = glm.vec3(), orientation:glm.quat = glm.quat()) -> None:
+        self._Position = glm.vec3(position)
+        self._Orientation = glm.quat(orientation)
+
 class Joint(tr.Transform):
-    Origin:tuple[glm.vec3, glm.quat]
-    Motion:list[tuple[glm.vec3, glm.quat]]
+    Origin:Keyframe
+    Keyframes:list[Keyframe]
     Channels:list[str]
+
+    @property
+    def Tip(self) -> glm.vec3:
+        children = len(self.Children)
+        if children == 1: return self.Children[0].Position
+        elif children > 1: return sum(child.Position for child in self.Children) / children
+        else: return self._Tip
+    @Tip.setter
+    def Tip(self, value:glm.vec3) -> None:
+        self._Tip = glm.vec3(value) if value is not None and glm.length(value) > 0.001 else glm.vec3(0, 1, 0)
+
+    @property
+    def Length(self) -> float:
+        return glm.length(self.Tip)
 
     def __init__(self, name:str) -> None:
         super().__init__()
         self.Name = name
+        self.Origin = Keyframe()
         self.Channels = []
-        self.Motion = []
-        self.Origin = [glm.vec3(), glm.quat()]
+        self.Keyframes = []
+        self.Tip = glm.vec3()
 
     def layout(self, startIndex:int = 0) -> list[object, int, int]:
         endIndex = startIndex+len(self.Channels)
         result = [[self, startIndex, endIndex]]
-
         for child in self.Children:
             result.extend(child.layout(result[-1][2]))
         return result
 
-    def serializeMotion(self) -> numpy.ndarray:
-        result:list[list[float]] = []
-        for (position, orientation) in self.Motion:
-            resultData:list[float] = []
-            rotOrder = ''.join([rot[0] for rot in self.Channels if rot[1:] == 'rotation'])
-            rotMat = glm.transpose(glm.mat3_cast(orientation))
-            rotation = glm.degrees(glm.vec3(tr.euler.fromMatTo(rotMat, rotOrder)))
-            for channel in self.Channels:
-                if 'Xposition' == channel: resultData.append(position.x); continue
-                if 'Yposition' == channel: resultData.append(position.y); continue
-                if 'Zposition' == channel: resultData.append(position.z); continue
-                if 'Xrotation' == channel: resultData.append(rotation.x); continue
-                if 'Yrotation' == channel: resultData.append(rotation.y); continue
-                if 'Zrotation' == channel: resultData.append(rotation.z); continue
-            result.append(resultData)
-        return numpy.array(result)
+    def readBone(self, recursive: bool = False) -> None:
+        self.Position = self.Bone.Position
+        self.Orientation = glm.quat()
+        if recursive:
+            for child in self.Children: child.readBone(recursive)
 
-    def deserializeMotion(self, data:numpy.ndarray) -> None:
-        self.Motion.clear()
-        for frame in data:
-            position = glm.vec3()
-            orientation = glm.quat()
-            for (index, channel) in enumerate(self.Channels):
-                if 'Xposition' == channel: position.x = frame[index]; continue
-                if 'Yposition' == channel: position.y = frame[index]; continue
-                if 'Zposition' == channel: position.z = frame[index]; continue
-                if 'Xrotation' == channel: orientation = glm.rotate(orientation, glm.radians(frame[index]), (1.0, 0.0, 0.0)); continue
-                if 'Yrotation' == channel: orientation = glm.rotate(orientation, glm.radians(frame[index]), (0.0, 1.0, 0.0)); continue
-                if 'Zrotation' == channel: orientation = glm.rotate(orientation, glm.radians(frame[index]), (0.0, 0.0, 1.0)); continue
-            self.Motion.append([position, orientation])
+    def writeBone(self, recursive: bool = False) -> None:
+        # targetOrienation = glm.quat(self.SpaceWorld) * self.Origin.Orientation
+        targetOrienation = glm.quat(self.SpaceWorld)
+        x = targetOrienation * glm.vec3(1, 0, 0)
+        y = targetOrienation * glm.vec3(0, 1, 0)
+        z = targetOrienation * glm.vec3(0, 0, -1)
 
-    def readOrigin(self) -> None:
-        self.Position = self.Origin[0]
-        self.Orientation = self.Origin[1]
-        for child in self.Children:
-            child.readOrigin()
+        # x1 = self.Origin.Orientation * glm.vec3(1, 0, 0)
+        # y1 = self.Origin.Orientation * glm.vec3(0, 1, 0)
+        # z1 = self.Origin.Orientation * glm.vec3(0, 0, -1)
 
-    def writeOrigin(self) -> None:
-        self.Origin[0] = self.Position
-        self.Origin[1] = self.Orientation
-        for child in self.Children:
-            child.writeOrigin()
+        foo = self.SpaceWorld * glm.vec4(0,0,0,1)
+
+        # for frame in range(len(self.Keyframes)):
+        #     oldOrientation = self.Keyframes[frame].Orientation * self.Origin.Orientation
+        if recursive:
+            for child in self.Children: child.writeBone(recursive)
 
     def readPose(self, frame:int) -> None:
-        self.Position = self.Motion[frame][0]
-        self.Orientation = self.Motion[frame][1]
-        for child in self.Children:
-            child.readPose(frame)
+        self.Position = self.Keyframes[frame].Position
+        self.Orientation = self.Keyframes[frame].Orientation
+        for child in self.Children: child.readPose(frame)
 
     def writePose(self, frame:int) -> None:
-        self.Motion[frame][0] = self.Position
-        self.Motion[frame][1] = self.Orientation
-        for child in self.Children:
-            child.writePose(frame)
-
-    def applyRotation(self, recursive: bool = False):
-        # for child in self.Children:
-        #     for frame in range(0, len(child.Motion)):
-        #         child.Motion[frame][0] = self.Orientation * child.Motion[frame][0]
-        #         child.Motion[frame][1] = self.Orientation * child.Motion[frame][1]
-        return super().applyRotation(recursive)
+        self.Motion[frame][0] = glm.vec3(self.Position)
+        self.Motion[frame][1] = glm.quat(self.Orientation)
+        for child in self.Children: child.writePose(frame)
 
 class BVH:
     Hierarchy:Joint
@@ -94,7 +99,7 @@ class BVH:
 
     @property
     def Frames(self) -> float:
-        return self.Motion.shape[0] if self.Motion is not None else 0
+        return len(self.Hierarchy.Keyframes) if self.Hierarchy is not None else 0
 
     @property
     def Motion(self) -> numpy.ndarray:

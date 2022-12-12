@@ -4,16 +4,18 @@ import numpy
 numpy.set_printoptions(precision=2)
 numpy.set_printoptions(suppress=True)
 
-result = bvhio.read('file2.bvh')
-# result.Hierarchy.readPose(0)
+result = bvhio.read('file1.bvh')
 
+result.Hierarchy.readPose(0)
 for (joint, _, _) in result.Hierarchy.layout():
-    print(joint.Position, joint.Orientation, joint.GetEuler(), joint.Name)
+    print(joint.Position, joint.GetEuler(), joint.Name)
 
 # result.Hierarchy.applyRotation(True)
 # result.Hierarchy.writeOrigin()
 
 
+result.Hierarchy.readPose(0)
+result.Hierarchy.writeBone(True)
 bvhio.write('bar.bvh', result)
 
 # result.deserializePose(0)

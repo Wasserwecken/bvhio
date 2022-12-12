@@ -18,7 +18,7 @@ class Transform:
         if self._IsOutdatedLocal:
             self._Space = glm.translate(self._Position)
             self._Space = glm.scale(self._Space, self._Scale)
-            self._Space = glm.mat4_cast(self._Orientation) * self._Space
+            self._Space = self._Space * glm.mat4_cast(self._Orientation)
             self._IsOutdatedLocal = False
         return self._Space
     @Space.setter
@@ -38,14 +38,14 @@ class Transform:
 
     @property
     def SpaceWorld(self) -> glm.mat4:
-        return self.Space * self.SpaceParent
+        return self.SpaceParent * self.Space
 
     @property
     def Position(self) -> glm.vec3:
         return self._Position
     @Position.setter
     def Position(self, value:glm.vec3) -> None:
-        self._Position = value
+        self._Position = glm.vec3(value)
         self._IsOutdatedLocal = True
 
     @property
@@ -53,7 +53,7 @@ class Transform:
         return self._Scale
     @Scale.setter
     def Scale(self, value:glm.vec3) -> None:
-        self._Scale = value
+        self._Scale = glm.vec3(value)
         self._IsOutdatedLocal = True
 
     @property
@@ -61,7 +61,7 @@ class Transform:
         return self._Orientation
     @Orientation.setter
     def Orientation(self, value:glm.quat) -> None:
-        self._Orientation = value
+        self._Orientation = glm.quat(value)
         self._IsOutdatedLocal = True
 
     @property
@@ -110,8 +110,16 @@ class Transform:
     def GetEuler(self, order:str = 'ZXY') -> glm.vec3:
         return glm.degrees(glm.vec3(tr.euler.fromMatTo(glm.transpose(glm.mat3_cast(self.Orientation)), order)))
 
+    def SetEuler(self, degrees:glm.vec3, order:str = 'ZXY') -> None:
+        self.Orientation = glm.quat()
+        for axis in order:
+            if axis.upper() == 'X': self.Orientation = glm.rotate(self.Orientation, glm.radians(degrees.x), (1.0, 0.0, 0.0)); continue
+            if axis.upper() == 'Y': self.Orientation = glm.rotate(self.Orientation, glm.radians(degrees.y), (0.0, 1.0, 0.0)); continue
+            if axis.upper() == 'Z': self.Orientation = glm.rotate(self.Orientation, glm.radians(degrees.z), (0.0, 0.0, 1.0)); continue
 
     def append(self, node:object) -> None:
+        if node is None:
+            raise ValueError(f'Given joint value is None')
         if node is self:
             raise ValueError(f'Joint "{self.Name}" cannot be parent of itself')
         if node.Parent is not None:
@@ -132,9 +140,10 @@ class Transform:
     #         child.Parent = None
     #     self._Children.clear()
 
-    def applyRotation(self, recursive:bool = False):
+    def applyRotation(self, recursive:bool = False, rotation:glm.quat = None) -> None:
+        rotation = self.Orientation if rotation is None else rotation
         for child in self.Children:
             child.Position = self.Orientation * child.Position
             child.Orientation = self.Orientation * child.Orientation
-            if recursive: child.applyRotation(recursive)
-        self.Orientation = glm.quat()
+            if recursive: child.applyRotation(recursive, rotation)
+        self.Orientation = self.Orientation * glm.inverse(rotation)
