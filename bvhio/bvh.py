@@ -48,32 +48,33 @@ class Joint(tr.Transform):
         self.Keyframes = []
         self.Tip = glm.vec3()
 
-    def layout(self, startIndex:int = 0) -> list[object, int, int]:
-        endIndex = startIndex+len(self.Channels)
-        result = [[self, startIndex, endIndex]]
+    def layout(self) -> list[object]:
+        result = [self]
         for child in self.Children:
-            result.extend(child.layout(result[-1][2]))
+            result.extend(child.layout())
         return result
 
-    def readBone(self, recursive: bool = False) -> None:
+    def readBone(self, recursive: bool = True) -> None:
         self.Position = self.Bone.Position
         self.Orientation = self.Bone.Orientation
         if recursive:
             for child in self.Children: child.readBone(recursive)
 
-    def writeBone(self, recursive: bool = False) -> None:
+    def writeBone(self, recursive: bool = True) -> None:
         if recursive:
             for child in self.Children: child.writeBone(recursive)
 
-    def readPose(self, frame:int) -> None:
+    def readPose(self, frame:int, recursive: bool = True) -> None:
         self.Position = self.Keyframes[frame].Position
         self.Orientation = self.Keyframes[frame].Orientation
-        for child in self.Children: child.readPose(frame)
+        if recursive:
+            for child in self.Children: child.readPose(frame)
 
-    def writePose(self, frame:int) -> None:
-        self.Motion[frame][0] = glm.vec3(self.Position)
-        self.Motion[frame][1] = glm.quat(self.Orientation)
-        for child in self.Children: child.writePose(frame)
+    def writePose(self, frame:int, recursive: bool = True) -> None:
+        self.Keyframes[frame].Position = self.Position
+        self.Keyframes[frame].Orientation = self.Orientation
+        if recursive:
+            for child in self.Children: child.writePose(frame)
 
 class BVH:
     Hierarchy:Joint
@@ -93,4 +94,12 @@ class BVH:
         result = layout[0][0].serializeMotion()
         for i in range(1, len(layout)):
             result = numpy.append(result, layout[i][0].serializeMotion(), 1)
+        return result
+
+    def layout(self) -> list[tuple[object, int, int]]:
+        result = []
+        startIndex = 0
+        for joint in self.Hierarchy.layout():
+            result.append((joint, startIndex, startIndex + len(joint.Channels)))
+            startIndex += len(joint.Channels)
         return result

@@ -5,10 +5,10 @@ import glm
 numpy.set_printoptions(precision=2)
 numpy.set_printoptions(suppress=True)
 
-result = bvhio.read('file1.bvh')
+result = bvhio.read('file2.bvh')
 
 # result.Hierarchy.readPose(0)
-for (joint, _, _) in result.Hierarchy.layout():
+for joint in result.Hierarchy.layout():
     print(joint.Position, joint.GetEuler(), joint.SpaceWorld * glm.vec4(0,0,0,1), joint.Name)
 
 # result.Hierarchy.applyRotation(True)
