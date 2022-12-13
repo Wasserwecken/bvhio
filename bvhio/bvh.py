@@ -22,7 +22,7 @@ class Keyframe:
         self._Orientation = glm.quat(orientation)
 
 class Joint(tr.Transform):
-    Origin:Keyframe
+    Bone:Keyframe
     Keyframes:list[Keyframe]
     Channels:list[str]
 
@@ -43,7 +43,7 @@ class Joint(tr.Transform):
     def __init__(self, name:str) -> None:
         super().__init__()
         self.Name = name
-        self.Origin = Keyframe()
+        self.Bone = Keyframe()
         self.Channels = []
         self.Keyframes = []
         self.Tip = glm.vec3()
@@ -57,25 +57,11 @@ class Joint(tr.Transform):
 
     def readBone(self, recursive: bool = False) -> None:
         self.Position = self.Bone.Position
-        self.Orientation = glm.quat()
+        self.Orientation = self.Bone.Orientation
         if recursive:
             for child in self.Children: child.readBone(recursive)
 
     def writeBone(self, recursive: bool = False) -> None:
-        # targetOrienation = glm.quat(self.SpaceWorld) * self.Origin.Orientation
-        targetOrienation = glm.quat(self.SpaceWorld)
-        x = targetOrienation * glm.vec3(1, 0, 0)
-        y = targetOrienation * glm.vec3(0, 1, 0)
-        z = targetOrienation * glm.vec3(0, 0, -1)
-
-        # x1 = self.Origin.Orientation * glm.vec3(1, 0, 0)
-        # y1 = self.Origin.Orientation * glm.vec3(0, 1, 0)
-        # z1 = self.Origin.Orientation * glm.vec3(0, 0, -1)
-
-        foo = self.SpaceWorld * glm.vec4(0,0,0,1)
-
-        # for frame in range(len(self.Keyframes)):
-        #     oldOrientation = self.Keyframes[frame].Orientation * self.Origin.Orientation
         if recursive:
             for child in self.Children: child.writeBone(recursive)
 

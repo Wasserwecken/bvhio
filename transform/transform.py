@@ -14,16 +14,16 @@ class Transform:
         return self._IsOutdatedLocal
 
     @property
-    def Space(self) -> glm.mat4:
+    def SpaceLocal(self) -> glm.mat4:
         if self._IsOutdatedLocal:
-            self._Space = glm.translate(self._Position)
-            self._Space = glm.scale(self._Space, self._Scale)
-            self._Space = self._Space * glm.mat4_cast(self._Orientation)
+            self._SpaceLocal = glm.translate(self._Position)
+            self._SpaceLocal = glm.scale(self._SpaceLocal, self._Scale)
+            self._SpaceLocal = self._SpaceLocal * glm.mat4_cast(self._Orientation)
             self._IsOutdatedLocal = False
-        return self._Space
-    @Space.setter
-    def Space(self, value:glm.mat4) -> None:
-        self._Space = value
+        return self._SpaceLocal
+    @SpaceLocal.setter
+    def SpaceLocal(self, value:glm.mat4) -> None:
+        self._SpaceLocal = value
         glm.decompose(value,
             self._Scale,
             self._Orientation,
@@ -38,7 +38,7 @@ class Transform:
 
     @property
     def SpaceWorld(self) -> glm.mat4:
-        return self.SpaceParent * self.Space
+        return self.SpaceParent * self.SpaceLocal
 
     @property
     def Position(self) -> glm.vec3:
@@ -88,7 +88,7 @@ class Transform:
         return self._Children
 
     def __init__(self) -> None:
-        self._Space = glm.mat4()
+        self._SpaceLocal = glm.mat4()
         self._Position = glm.vec3()
         self.Scale = glm.vec3(1)
         self.Orientation = glm.quat()

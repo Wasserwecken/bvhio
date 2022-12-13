@@ -27,7 +27,7 @@ def read(path:str) -> BVH:
         if tokens[0] != 'ROOT':
             raise SyntaxError('First Joint must be defined as "ROOT"', debugInfo)
         result.Hierarchy = parseJoint(file, deserializeJointName(tokens, debugInfo))
-        calculateOrigin(result.Hierarchy)
+        calculateBones(result.Hierarchy)
 
         line, tokens, debugInfo = parseLine(file, line)
         if not tokens[0] == 'MOTION' and len(tokens) == 1:
@@ -108,25 +108,16 @@ def deserializeEndSite(file:TextIOWrapper, line:int) -> glm.vec3:
         raise SyntaxError('End Site definition must start with an opening bracket', debugInfo)
     return result
 
-def calculateTip(joint:Joint, endSiteOffset:glm.vec3) -> glm.vec3:
-    children = len(joint.Children)
-    if children == 0: return endSiteOffset if glm.length(endSiteOffset) > 0.001 else glm.vec3(0, 0, 1)
-    if children == 1: return joint.Children[0].Position
-    else:
-        tip = glm.vec3(0)
-        for child in child: tip += child.Position
-        return tip / children
-
-def calculateOrigin(joint:Joint) -> None:
+def calculateBones(joint:Joint) -> None:
     tipDir = glm.normalize(joint.Tip)
     tipDot = glm.abs(glm.dot(tipDir, glm.vec3(0, 0, 1)))
     tipAxis = glm.vec3(0, 0, 1) if tipDot < 0.9999 else glm.vec3(1, 0, 0)
 
-    joint.Origin.Position = joint.Position
-    joint.Origin.Orientation = glm.quatLookAtRH(tipDir, tipAxis)
+    joint.Bone.Position = joint.Position
+    joint.Bone.Orientation = glm.quatLookAtRH(tipDir, tipAxis)
 
     for child in joint.Children:
-        calculateOrigin(child)
+        calculateBones(child)
 
 def deserializeFrameTime(data:list, debugInfo:tuple) -> float:
     if not isinstance(data, list) or len(data) != 1:
@@ -143,27 +134,29 @@ def deserializeKeyframe(data:list, debugInfo:tuple) -> numpy.ndarray:
         raise SyntaxError('Keyframe must be numerics only', debugInfo)
 
 def deserializeMotion(joint:Joint, data:numpy.ndarray, startIndex = 0) -> None:
-    joint.Position = glm.vec3(joint.Origin.Position)
-    joint.Orientation = glm.quat()
+    position = glm.vec3(joint.Bone.Position)
+    orientation = glm.quat()
     for (index, channel) in enumerate(joint.Channels):
         value = data[startIndex + index]
-        if 'Xposition' == channel: joint.Position.x = value; continue
-        if 'Yposition' == channel: joint.Position.y = value; continue
-        if 'Zposition' == channel: joint.Position.z = value; continue
-        if 'Xrotation' == channel: joint.Orientation = glm.rotate(joint.Orientation, glm.radians(value), (1.0, 0.0, 0.0)); continue
-        if 'Yrotation' == channel: joint.Orientation = glm.rotate(joint.Orientation, glm.radians(value), (0.0, 1.0, 0.0)); continue
-        if 'Zrotation' == channel: joint.Orientation = glm.rotate(joint.Orientation, glm.radians(value), (0.0, 0.0, 1.0)); continue
-    joint.Keyframes.append(Keyframe(joint.Position, joint.Orientation))
+        if 'Xposition' == channel: position.x = value; continue
+        if 'Yposition' == channel: position.y = value; continue
+        if 'Zposition' == channel: position.z = value; continue
+        if 'Xrotation' == channel: orientation = glm.rotate(orientation, glm.radians(value), (1.0, 0.0, 0.0)); continue
+        if 'Yrotation' == channel: orientation = glm.rotate(orientation, glm.radians(value), (0.0, 1.0, 0.0)); continue
+        if 'Zrotation' == channel: orientation = glm.rotate(orientation, glm.radians(value), (0.0, 0.0, 1.0)); continue
+    joint.Keyframes.append(Keyframe(position, orientation))
+
+    joint.Position = position
+    joint.Orientation = orientation
+
+    targetOrienation = glm.quat(joint.SpaceWorld) * joint.Bone.Orientation
+    w = joint.SpaceWorld * glm.vec4(0,0,0,1)
+    x = targetOrienation * glm.vec3(1, 0, 0)
+    y = targetOrienation * glm.vec3(0, 1, 0)
+    z = targetOrienation * glm.vec3(0, 0, -1)
+
     for child in joint.Children:
         deserializeMotion(child, data, startIndex + len(joint.Channels))
-
-    # joint.applyRotation(False, glm.inverse(joint.Origin.Orientation))
-    joint.Orientation = joint.Origin.Orientation * joint.Orientation
-    x = glm.quat(joint.SpaceWorld) * glm.vec3(1, 0, 0)
-    y = glm.quat(joint.SpaceWorld) * glm.vec3(0, 1, 0)
-    z = glm.quat(joint.SpaceWorld) * glm.vec3(0, 0, -1)
-    foo = joint.SpaceWorld * glm.vec4(0,0,0,1)
-    foo = 1
 
 
 
@@ -181,7 +174,7 @@ def write(path:str, bvh:BVH, percision:int = 9) -> None:
             file.write('\n')
 
 def writeHierarchy(file:TextIOWrapper, joint:Joint, indent:int, isFirst:bool, percision:int) -> None:
-    offset = joint.Origin.Position
+    offset = joint.Bone.Position
     file.write(f'{" "*indent}{"ROOT" if isFirst else "JOINT"} {joint.Name}\n')
     file.write(f'{" "*indent}{{\n')
     file.write(f'{" "*(indent+1)}OFFSET {round(offset.x, percision)} {round(offset.y ,percision)} {round(offset.z, percision)}\n')
