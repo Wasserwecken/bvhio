@@ -5,7 +5,6 @@ import errno
 from .bvh import *
 from io import TextIOWrapper
 
-
 def parseLine(file:TextIOWrapper, lineNumber:int) -> tuple[int, list[str], tuple[TextIOWrapper, int, int, str]]:
     lineNumber += 1
     line = file.readline()
@@ -47,10 +46,11 @@ def read(path:str) -> BVH:
             except:
                 break
 
-        for frame in range(len(result.Hierarchy.Keyframes)):
-            result.Hierarchy.readPose(frame)
-            convertMotion(result.Hierarchy, frame)
+        # for frame in range(len(result.Hierarchy.Keyframes)):
+        #     result.Hierarchy.readPose(frame)
+        #     convertMotion(result.Hierarchy, frame)
 
+        result.Hierarchy.readBone(True)
         return result
 
 def parseJoint(file:TextIOWrapper, name:str, line:int = 0) -> Joint:
@@ -115,11 +115,11 @@ def deserializeEndSite(file:TextIOWrapper, line:int) -> glm.vec3:
 
 def calculateBones(joint:Joint) -> None:
     tipDir = glm.normalize(joint.Tip)
-    tipDot = glm.abs(glm.dot(tipDir, glm.vec3(0, 0, 1)))
-    tipAxis = glm.vec3(0, 0, 1) if tipDot < 0.9999 else glm.vec3(1, 0, 0)
+    tipDot = glm.abs(glm.dot(tipDir, glm.vec3(0, 1, 0)))
+    tipAxis = glm.vec3(0, 1, 0) if tipDot < 0.9999 else glm.vec3(1, 0, 0)
 
     joint.Bone.Position = joint.Position
-    joint.Bone.Orientation = glm.quatLookAtRH(tipDir, tipAxis)
+    joint.Bone.Orientation = glm.quatLookAtLH(tipDir, tipAxis)
 
     for child in joint.Children:
         calculateBones(child)
@@ -139,32 +139,27 @@ def deserializeKeyframe(data:list, debugInfo:tuple) -> numpy.ndarray:
         raise SyntaxError('Keyframe must be numerics only', debugInfo)
 
 def deserializeMotion(joint:Joint, data:numpy.ndarray, startIndex = 0) -> None:
-    position = joint.Bone.Position
+    position = glm.vec3(joint.Bone.Position)
     orientation = glm.quat()
     for (index, channel) in enumerate(joint.Channels):
         value = data[startIndex + index]
         if 'Xposition' == channel: position.x = value; continue
         if 'Yposition' == channel: position.y = value; continue
         if 'Zposition' == channel: position.z = value; continue
-        if 'Xrotation' == channel: orientation = glm.rotate(orientation, glm.radians(value), (1.0, 0.0, 0.0)); continue
-        if 'Yrotation' == channel: orientation = glm.rotate(orientation, glm.radians(value), (0.0, 1.0, 0.0)); continue
-        if 'Zrotation' == channel: orientation = glm.rotate(orientation, glm.radians(value), (0.0, 0.0, 1.0)); continue
-
+        if 'Xrotation' == channel: orientation = glm.rotate(orientation, glm.radians(value), (1,0,0)); continue
+        if 'Yrotation' == channel: orientation = glm.rotate(orientation, glm.radians(value), (0,1,0)); continue
+        if 'Zrotation' == channel: orientation = glm.rotate(orientation, glm.radians(value), (0,0,1)); continue
     joint.Keyframes.append(Keyframe(position, orientation))
     for child in joint.Children:
         deserializeMotion(child, data, startIndex + len(joint.Channels))
 
 def convertMotion(joint:Joint, frame:int) -> None:
-    joint.Orientation = joint.Orientation * joint.Bone.Orientation
-    for child in joint.Children:
-        child.Position = glm.inverse(joint.Bone.Orientation) * child.Position
-        child.Orientation = glm.inverse(joint.Bone.Orientation) * child.Orientation
-    joint.writePose(frame)
+    joint.applyRotation(joint.Bone.Orientation)
 
-    w = joint.SpaceWorld * glm.vec4(0, 0, 0, 1)
-    x = glm.quat(joint.SpaceWorld) * glm.vec3(1, 0, 0)
-    y = glm.quat(joint.SpaceWorld) * glm.vec3(0, 1, 0)
-    z = glm.quat(joint.SpaceWorld) * glm.vec3(0, 0, -1)
+    # v = glm.quat(joint.SpaceWorld) * joint.Bone.Orientation
+    # w = joint.pointToWorld((0,0,0))
+    # z = joint.ForwardWorld
+    # a = 1
 
     for child in joint.Children:
         convertMotion(child, frame)

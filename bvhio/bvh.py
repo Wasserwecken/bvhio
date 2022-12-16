@@ -1,6 +1,7 @@
 import numpy
 import glm
-import transform as tr
+import SpatialTransform as tr
+
 
 class Keyframe:
     @property
