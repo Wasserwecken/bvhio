@@ -10,9 +10,11 @@ Libary for reading [Biovision .bvh](https://research.cs.wisc.edu/graphics/Course
 - Transforms data is converted to work without base pose.
 - Allows reading joint properties in local and world space.
 - Space is defined as: Y+ is Up and right handed like openGL
+- Transform logic uses the package [spatial-transform](https://github.com/Wasserwecken/spatial-transform)
+- Calculations are done with [PyGLM](https://github.com/Zuzu-Typ/PyGLM)
 
 ## Examples
-### Read load and show data from a bvh file
+### Read, load and show data from a bvh file
 ```python
 import bvhio
 
