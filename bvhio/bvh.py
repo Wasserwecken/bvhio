@@ -1,79 +1,98 @@
 import numpy
 import glm
-import SpatialTransform as tr
+import SpatialTransform as st
 
-
-class Keyframe:
+class Pose:
     @property
-    def Position(self) -> glm.vec3:
-        return self._Position
+    def Position(self) -> glm.vec3: return glm.vec3(self._Position)
     @Position.setter
-    def Position(self, value:glm.vec3) -> None:
-        self._Position = glm.vec3(value)
+    def Position(self, value:glm.vec3) -> None: self._Position = glm.vec3(value)
 
     @property
-    def Orientation(self) -> glm.quat:
-        return self._Orientation
+    def Orientation(self) -> glm.quat: return glm.quat(self._Orientation)
     @Orientation.setter
-    def Orientation(self, value:glm.quat) -> None:
-        self._Orientation = glm.quat(value)
+    def Orientation(self, value:glm.quat) -> None: self._Orientation = glm.quat(value)
 
     def __init__(self, position:glm.vec3 = glm.vec3(), orientation:glm.quat = glm.quat()) -> None:
         self._Position = glm.vec3(position)
         self._Orientation = glm.quat(orientation)
 
-class Joint(tr.Transform):
-    Bone:Keyframe
-    Keyframes:list[Keyframe]
-    Channels:list[str]
+    def __repr__(self) -> str:
+        return (f"Pos: {self.Position}, Rot: {self.Orientation}")
 
-    @property
-    def Tip(self) -> glm.vec3:
+class RootPose(Pose):
+    Name:str
+    Keyframes:list[Pose]
+    Channels:list[str]
+    Children:list[object]
+
+    def __init__(self, name:str = '', position: glm.vec3 = glm.vec3(), orientation: glm.quat = glm.quat()) -> None:
+        super().__init__(position, orientation)
+        self.Name = name
+        self.Keyframes = []
+        self.Channels = []
+        self.Children = []
+
+    def __repr__(self) -> str:
+        return (f"Name: {self.Name}, Pos: {self.Position}, Rot: {self.Orientation}")
+
+    def getTip(self, defaultTip:glm.vec3 = glm.vec3()) -> glm.vec3:
         children = len(self.Children)
         if children == 1: return self.Children[0].Position
         elif children > 1: return sum(child.Position for child in self.Children) / children
-        else: return self._Tip
-    @Tip.setter
-    def Tip(self, value:glm.vec3) -> None:
-        self._Tip = glm.vec3(value) if value is not None and glm.length(value) > 0.001 else glm.vec3(0, 1, 0)
+        else: return defaultTip if glm.length(defaultTip) > 0.01 else glm.vec3(0,1,0)
 
-    @property
-    def Length(self) -> float:
-        return glm.length(self.Tip)
+    def getLength(self) -> float:
+        return glm.length(self.GetTip())
 
-    def __init__(self, name:str) -> None:
-        super().__init__()
-        self.Name = name
-        self.Bone = Keyframe()
-        self.Channels = []
-        self.Keyframes = []
-        self.Tip = glm.vec3()
-
-    def layout(self) -> list[object]:
-        result = [self]
+    def layout(self, index:int = 0, depth:int = 0) -> list[tuple[object, int, int]]:
+        result = [[self, index, depth]]
         for child in self.Children:
-            result.extend(child.layout())
+            result.extend(child.layout(result[-1][1] + 1, depth + 1))
         return result
 
-    def readBone(self, recursive: bool = True) -> None:
-        self.Position = self.Bone.Position
-        self.Orientation = self.Bone.Orientation
-        if recursive:
-            for child in self.Children: child.readBone(recursive)
 
-    def writeBone(self, recursive: bool = True) -> None:
+class Joint(st.Transform):
+    DataBVH:RootPose
+    Keyframes:list[Pose]
+
+    def __init__(self, dataBVH:RootPose) -> None:
+        super().__init__(dataBVH.Name, dataBVH.Position, dataBVH.Orientation)
+        self.Keyframes = []
+        self.DataBVH = dataBVH
+        for childData in dataBVH.Children:
+            self.append(Joint(childData))
+
+    def readPoseBVH(self, frame:int, recursive: bool = True) -> None:
+        if frame < 0 or frame > len(self.DataBVH.Keyframes) - 1:
+            raise ValueError("Frame number must be zero or positive and less than the keyframe count.")
+
+        self.Position = self.DataBVH.Keyframes[frame].Position
+        self.Orientation = self.DataBVH.Keyframes[frame].Orientation
+
         if recursive:
-            for child in self.Children: child.writeBone(recursive)
+            for child in self.Children: child.readPoseBVH(frame)
 
     def readPose(self, frame:int, recursive: bool = True) -> None:
+        if frame < 0 or frame > len(self.Keyframes) - 1:
+            raise ValueError("Frame number must be zero or positive and less than the keyframe count.")
+
         self.Position = self.Keyframes[frame].Position
         self.Orientation = self.Keyframes[frame].Orientation
+
         if recursive:
             for child in self.Children: child.readPose(frame)
 
     def writePose(self, frame:int, recursive: bool = True) -> None:
-        self.Keyframes[frame].Position = self.Position
-        self.Keyframes[frame].Orientation = self.Orientation
+        if frame < 0 or frame > len(self.Keyframes):
+            raise ValueError("Frame number must be zero or positive and less or equal than the keyframe count.")
+
+        elif frame < len(self.Keyframes):
+            self.Keyframes[frame].Position = self.Position
+            self.Keyframes[frame].Orientation = self.Orientation
+        elif frame == len(self.Keyframes):
+            self.Keyframes.append(Pose(self.Position, self.Orientation))
+
         if recursive:
             for child in self.Children: child.writePose(frame)
 

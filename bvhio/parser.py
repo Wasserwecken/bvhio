@@ -18,21 +18,23 @@ def read(path:str) -> BVH:
 
     result = BVH()
     with open(path, "r") as file:
+        # check for 'HIERARCHY' start
         line, tokens, debugInfo = parseLine(file, 0)
         if not tokens[0] == 'HIERARCHY' and len(tokens) == 1:
             raise SyntaxError('First line must be only "HIERARCHY"', debugInfo)
 
+        # parse joints recursivly
         line, tokens, debugInfo = parseLine(file, line)
         if tokens[0] != 'ROOT':
             raise SyntaxError('First Joint must be defined as "ROOT"', debugInfo)
-        result.Hierarchy = parseJoint(file, deserializeJointName(tokens, debugInfo))
-        calculateBones(result.Hierarchy)
+        bvhHierarchy = parseJoint(file, deserializeJointName(tokens, debugInfo))
 
+        # check for 'MOTION' start
         line, tokens, debugInfo = parseLine(file, line)
         if not tokens[0] == 'MOTION' or not len(tokens) == 1:
             raise SyntaxError('After end of hierarchy must follow "MOTION"', debugInfo)
 
-        keyframes = []
+        # parse motion data
         while(True):
             try:
                 line, tokens, debugInfo = parseLine(file, line)
@@ -41,38 +43,53 @@ def read(path:str) -> BVH:
                 elif len(tokens) == 3 and tokens[0] == 'Frame':
                     result.FrameTime = deserializeFrameTime(tokens[2:], debugInfo)
                 else:
-                    data = deserializeKeyframe(tokens, debugInfo)
-                    deserializeMotion(result.Hierarchy, data)
+                    ## add keyframe to joints
+                    deserializeMotion(bvhHierarchy, deserializeKeyframe(tokens, debugInfo))
             except:
                 break
 
-        for frame in range(len(result.Hierarchy.Keyframes)):
-            result.Hierarchy.readPose(frame)
-            convertMotion(result.Hierarchy, frame)
+        result.Hierarchy = Joint(bvhHierarchy)
+        result.Hierarchy.Keyframes.clear()
+        for frame in range(len(result.Hierarchy.DataBVH.Keyframes)):
+            result.Hierarchy.readPoseBVH(frame)
+            convertBVHMotion(result.Hierarchy, frame)
             result.Hierarchy.writePose(frame)
 
-        result.Hierarchy.readBone(True)
         return result
 
-def parseJoint(file:TextIOWrapper, name:str, line:int = 0) -> Joint:
+def parseJoint(file:TextIOWrapper, name:str, line:int = 0) -> RootPose:
+    # check for open bracket
     line, tokens, debugInfo = parseLine(file, line)
     if tokens[0] != '{' or len(tokens) > 1:
         raise SyntaxError('Joint definition must start with an opening bracket', debugInfo)
 
-    joint = Joint(name)
+    # create joint and read channels and offeset
+    joint = RootPose(name)
     joint.Position = deserializeOffset(file, line)
     joint.Channels = deserializeChannles(file, line)
 
+    # check for definition end or child joints or end site info
+    tipPos = glm.vec3()
     while(True):
         line, tokens, debugInfo = parseLine(file, line)
         if tokens[0] == 'JOINT':
-            joint.append(parseJoint(file, deserializeJointName(tokens, debugInfo), line))
+            joint.Children.append(parseJoint(file, deserializeJointName(tokens, debugInfo), line))
         elif tokens[0] == 'End':
-            joint.Tip = deserializeEndSite(file, line)
+            tipPos = deserializeEndSite(file, line)
         elif tokens[0] == '}':
-            return joint
+            break
         else:
             raise SyntaxError('Joint definition must end with an child joint, end site or closing bracket', debugInfo)
+
+    # calculate bone orientation based on local tip position
+    tipDir = glm.normalize(joint.getTip(tipPos))
+    tipAxis = glm.vec3(0, 0, 1)
+    tipDot = glm.abs(glm.dot(tipDir, tipAxis))
+    if tipDot > 0.999: tipAxis = glm.vec3(1, 0, 0)
+    joint.Orientation = glm.quatLookAtRH(tipDir, tipAxis)
+
+    # return deserialized joint root pose
+    return joint
 
 def deserializeJointName(tokens:list[str], debugInfo:tuple[TextIOWrapper, int, int, str]) -> str:
     if not isinstance(tokens, list) and len(tokens) != 2:
@@ -114,18 +131,6 @@ def deserializeEndSite(file:TextIOWrapper, line:int) -> glm.vec3:
         raise SyntaxError('End Site definition must start with an opening bracket', debugInfo)
     return result
 
-def calculateBones(joint:Joint) -> None:
-    tipDir = glm.normalize(joint.Tip)
-    tipAxis = glm.vec3(0, 0, 1)
-    tipDot = glm.abs(glm.dot(tipDir, tipAxis))
-    if tipDot > 0.9999: tipAxis = glm.vec3(1, 0, 0)
-
-    joint.Bone.Position = joint.Position
-    joint.Bone.Orientation = glm.quatLookAtRH(tipDir, tipAxis)
-
-    for child in joint.Children:
-        calculateBones(child)
-
 def deserializeFrameTime(data:list, debugInfo:tuple) -> float:
     if not isinstance(data, list) or len(data) != 1:
         raise SyntaxError('Frame time must be a 1-dimensional tuple', debugInfo)
@@ -140,28 +145,27 @@ def deserializeKeyframe(data:list, debugInfo:tuple) -> numpy.ndarray:
     except ValueError:
         raise SyntaxError('Keyframe must be numerics only', debugInfo)
 
-def deserializeMotion(joint:Joint, data:numpy.ndarray, startIndex = 0) -> int:
-    position = glm.vec3(joint.Bone.Position)
+def deserializeMotion(joint:RootPose, data:numpy.ndarray, index = 0) -> int:
+    position = glm.vec3(joint.Position)
     orientation = glm.quat()
-    for (index, channel) in enumerate(joint.Channels):
-        value = data[startIndex + index]
-        if 'Xposition' == channel: position.x = value; continue
-        if 'Yposition' == channel: position.y = value; continue
-        if 'Zposition' == channel: position.z = value; continue
-        if 'Xrotation' == channel: orientation = glm.rotate(orientation, glm.radians(value), (1,0,0)); continue
-        if 'Yrotation' == channel: orientation = glm.rotate(orientation, glm.radians(value), (0,1,0)); continue
-        if 'Zrotation' == channel: orientation = glm.rotate(orientation, glm.radians(value), (0,0,1)); continue
-    joint.Keyframes.append(Keyframe(position, orientation))
+    for channel in joint.Channels:
+        if 'Xposition' == channel: position.x = data[index]
+        elif 'Yposition' == channel: position.y = data[index]
+        elif 'Zposition' == channel: position.z = data[index]
+        elif 'Xrotation' == channel: orientation = glm.rotate(orientation, glm.radians(data[index]), (1,0,0))
+        elif 'Yrotation' == channel: orientation = glm.rotate(orientation, glm.radians(data[index]), (0,1,0))
+        elif 'Zrotation' == channel: orientation = glm.rotate(orientation, glm.radians(data[index]), (0,0,1))
+        index += 1
+    joint.Keyframes.append(Pose(position, orientation))
 
-    startIndex += len(joint.Channels)
     for child in joint.Children:
-        startIndex = deserializeMotion(child, data, startIndex)
-    return startIndex
+        index = deserializeMotion(child, data, index)
+    return index
 
-def convertMotion(joint:Joint, frame:int) -> None:
-    joint.applyRotation(joint.Bone.Orientation)
+def convertBVHMotion(joint:Joint, frame:int) -> None:
+    joint.applyRotation(joint.DataBVH.Orientation)
     for child in joint.Children:
-        convertMotion(child, frame)
+        convertBVHMotion(child, frame)
 
 def write(path:str, bvh:BVH, percision:int = 9) -> None:
     with open(path, "w") as file:
@@ -194,8 +198,7 @@ def writeMotion(file:TextIOWrapper, joint:Joint, frame:int, percision:int) -> No
     orientation = joint.Keyframes[frame].Orientation
 
     rotOrder = ''.join([rot[0] for rot in joint.Channels if rot[1:] == 'rotation'])
-    rotMat = glm.transpose(glm.mat3_cast(orientation))
-    rotation = glm.degrees(glm.vec3(tr.euler.fromMatTo(rotMat, rotOrder)))
+    rotation = joint.getEuler(rotOrder)
 
     for channel in joint.Channels:
         if 'Xposition' == channel: file.write(f'{round(position.x, percision)} '); continue
