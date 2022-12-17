@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "bvhio"
+version = "1.0.0"
+authors = [
+  { name="Wasserwecken", email="author@example.com" },
+]
+description = "Libary for reading Biovision .bvh files and converting the data into a hierarchical spatial structure, as 3D apps would do it."
+readme = "readme.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = ['PyGLM', 'spatial-transform']
+
+[project.urls]
+"Homepage" = "https://github.com/Wasserwecken/bvhio"
+"Bug Tracker" = "https://github.com/Wasserwecken/bvhio/issues"

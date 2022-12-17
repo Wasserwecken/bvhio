@@ -1,4 +1,3 @@
-import numpy
 import glm
 import SpatialTransform as st
 
@@ -102,19 +101,3 @@ class BVH:
     @property
     def Frames(self) -> float:
         return len(self.Hierarchy.Keyframes) if self.Hierarchy is not None else 0
-
-    @property
-    def Motion(self) -> numpy.ndarray:
-        layout = self.Hierarchy.layout(0)
-        result = layout[0][0].serializeMotion()
-        for i in range(1, len(layout)):
-            result = numpy.append(result, layout[i][0].serializeMotion(), 1)
-        return result
-
-    def layout(self) -> list[tuple[object, int, int]]:
-        result = []
-        startIndex = 0
-        for joint in self.Hierarchy.layout():
-            result.append((joint, startIndex, startIndex + len(joint.Channels)))
-            startIndex += len(joint.Channels)
-        return result
