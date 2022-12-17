@@ -1,14 +1,13 @@
 import bvhio
 import numpy
-import glm
 
 numpy.set_printoptions(precision=2)
 numpy.set_printoptions(suppress=True)
 
 bvh = bvhio.read('file1.bvh')
 
-bvh.Hierarchy.readPose(0)
+bvh.Hierarchy.readPose(250)
 for joint in bvh.Hierarchy.layout():
-    print(joint.Position, joint.pointToWorld((0,0,0)), joint.Name)
+    print(joint.pointToWorld((0,0,0)), joint.ForwardWorld, joint.RightWorld, joint.UpWorld, joint.Name)
 
 pass
