@@ -51,7 +51,7 @@ def read(path:str) -> BVH:
         result.Hierarchy = Joint(bvhHierarchy)
         result.Hierarchy.Keyframes.clear()
         for frame in range(len(result.Hierarchy.DataBVH.Keyframes)):
-            result.Hierarchy.readPoseBVH(frame)
+            result.Hierarchy.readPose(frame, fromBVH=True)
             convertBVHMotion(result.Hierarchy, frame)
             result.Hierarchy.writePose(frame)
 

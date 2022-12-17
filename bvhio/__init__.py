@@ -1,2 +1,2 @@
 from .bvh import *
-from .parser import read, write
+from .parser import read

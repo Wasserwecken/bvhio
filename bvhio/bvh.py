@@ -63,29 +63,24 @@ class Joint(st.Transform):
         for childData in dataBVH.Children:
             self.append(Joint(childData))
 
-    def readPoseBVH(self, frame:int, recursive: bool = True) -> None:
-        if frame < 0 or frame > len(self.DataBVH.Keyframes) - 1:
-            raise ValueError("Frame number must be zero or positive and less than the keyframe count.")
-
-        self.Position = self.DataBVH.Keyframes[frame].Position
-        self.Orientation = self.DataBVH.Keyframes[frame].Orientation
-
-        if recursive:
-            for child in self.Children: child.readPoseBVH(frame)
-
-    def readPose(self, frame:int, recursive: bool = True) -> None:
-        if frame < 0 or frame > len(self.Keyframes) - 1:
-            raise ValueError("Frame number must be zero or positive and less than the keyframe count.")
-
-        self.Position = self.Keyframes[frame].Position
-        self.Orientation = self.Keyframes[frame].Orientation
+    def readPose(self, frame:int, recursive: bool = True, fromBVH:bool = False) -> None:
+        if fromBVH:
+            if frame < 0 or frame >= len(self.DataBVH.Keyframes):
+                raise ValueError(f'Frame number "{frame}" for {self.Name} is out of range. ({len(self.DataBVH.Keyframes)} Keyframes)')
+            self.Position = self.DataBVH.Keyframes[frame].Position
+            self.Orientation = self.DataBVH.Keyframes[frame].Orientation
+        else:
+            if frame < 0 or frame >= len(self.Keyframes):
+                raise ValueError(f'Frame number "{frame}" for {self.Name} is out of range. ({len(self.Keyframes)} Keyframes)')
+            self.Position = self.Keyframes[frame].Position
+            self.Orientation = self.Keyframes[frame].Orientation
 
         if recursive:
-            for child in self.Children: child.readPose(frame)
+            for child in self.Children: child.readPose(frame, recursive, fromBVH)
 
     def writePose(self, frame:int, recursive: bool = True) -> None:
         if frame < 0 or frame > len(self.Keyframes):
-            raise ValueError("Frame number must be zero or positive and less or equal than the keyframe count.")
+            raise ValueError(f'Frame number "{frame}" for {self.Name} is out of range.')
 
         elif frame < len(self.Keyframes):
             self.Keyframes[frame].Position = self.Position
