@@ -1,3 +1,4 @@
+.vscode/
 dist/
 __pycache__/
 test.ipynb
