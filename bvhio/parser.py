@@ -13,6 +13,7 @@ def parseLine(file:TextIOWrapper, lineNumber:int) -> tuple[int, list[str], tuple
     return (lineNumber, tokens, debugInfo)
 
 def read(path:str) -> BVH:
+    """Reads an .bvh file"""
     if not os.path.exists(path):
         raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), path)
 
@@ -48,7 +49,10 @@ def read(path:str) -> BVH:
             except:
                 break
 
+        # create a copy of the defined hierarchy with transforms
         result.Hierarchy = Joint(bvhHierarchy)
+
+        # convert the motion data into local space data respecting the root pose
         result.Hierarchy.Keyframes.clear()
         for frame in range(len(result.Hierarchy.DataBVH.Keyframes)):
             result.Hierarchy.readPose(frame, fromBVH=True)
