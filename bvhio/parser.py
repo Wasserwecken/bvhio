@@ -81,12 +81,12 @@ def parseJoint(file:TextIOWrapper, name:str, line:int = 0) -> RootPose:
         else:
             raise SyntaxError('Joint definition must end with an child joint, end site or closing bracket', debugInfo)
 
-    # calculate bone orientation based on local tip position
+    # calculate bone Rotation based on local tip position
     tipDir = glm.normalize(joint.getTip(tipPos))
     tipAxis = glm.vec3(0, 0, 1)
     tipDot = glm.abs(glm.dot(tipDir, tipAxis))
     if tipDot > 0.999: tipAxis = glm.vec3(1, 0, 0)
-    joint.Orientation = glm.quatLookAtRH(tipDir, tipAxis)
+    joint.Rotation = glm.quatLookAtRH(tipDir, tipAxis)
 
     # return deserialized joint root pose
     return joint
@@ -147,23 +147,23 @@ def deserializeKeyframe(data:list, debugInfo:tuple) -> numpy.ndarray:
 
 def deserializeMotion(joint:RootPose, data:numpy.ndarray, index = 0) -> int:
     position = glm.vec3(joint.Position)
-    orientation = glm.quat()
+    Rotation = glm.quat()
     for channel in joint.Channels:
         if 'Xposition' == channel: position.x = data[index]
         elif 'Yposition' == channel: position.y = data[index]
         elif 'Zposition' == channel: position.z = data[index]
-        elif 'Xrotation' == channel: orientation = glm.rotate(orientation, glm.radians(data[index]), (1,0,0))
-        elif 'Yrotation' == channel: orientation = glm.rotate(orientation, glm.radians(data[index]), (0,1,0))
-        elif 'Zrotation' == channel: orientation = glm.rotate(orientation, glm.radians(data[index]), (0,0,1))
+        elif 'Xrotation' == channel: Rotation = glm.rotate(Rotation, glm.radians(data[index]), (1,0,0))
+        elif 'Yrotation' == channel: Rotation = glm.rotate(Rotation, glm.radians(data[index]), (0,1,0))
+        elif 'Zrotation' == channel: Rotation = glm.rotate(Rotation, glm.radians(data[index]), (0,0,1))
         index += 1
-    joint.Keyframes.append(Pose(position, orientation))
+    joint.Keyframes.append(Pose(position, Rotation))
 
     for child in joint.Children:
         index = deserializeMotion(child, data, index)
     return index
 
 def convertBVHMotion(joint:Joint, frame:int) -> None:
-    joint.applyRotation(joint.DataBVH.Orientation)
+    joint.applyRotation(joint.DataBVH.Rotation)
     for child in joint.Children:
         convertBVHMotion(child, frame)
 
@@ -195,7 +195,7 @@ def writeHierarchy(file:TextIOWrapper, joint:Joint, indent:int, isFirst:bool, pe
 
 def writeMotion(file:TextIOWrapper, joint:Joint, frame:int, percision:int) -> None:
     position = joint.Keyframes[frame].Position
-    orientation = joint.Keyframes[frame].Orientation
+    Rotation = joint.Keyframes[frame].Rotation
 
     rotOrder = ''.join([rot[0] for rot in joint.Channels if rot[1:] == 'rotation'])
     rotation = joint.getEuler(rotOrder)
