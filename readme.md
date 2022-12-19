@@ -78,45 +78,63 @@ bvh.Hierarchy.writePose(0)
 # Hierarchy is positioned and aligned by the keyframe
 bvh.Hierarchy.readPose(0)
 
-# scale root bone to have the values roughly match meters.
-# the root position has to be updated to the scale too if there is no root bone!
+# scale root bone to have the value roughly match meters.
+# the root position has to be updated to the scale too!
 bvh.Hierarchy.Scale = (0.02, 0.02, 0.02)
 bvh.Hierarchy.Position *= bvh.Hierarchy.Scale
 
-# get world space positions of all joints
+# get world space position of all joints
+print('Joint positions in world space:')
 for joint, index, depth in bvh.Hierarchy.layout():
-    print(f'Position: {joint.pointToWorld((0,0,0))} {joint.Name}')
+    print(f'{joint.pointToWorld((0,0,0))} {joint.Name}')
 
 # read data for a single joint
 arm = bvh.Hierarchy.select('LeftLowArm', isEqual=True)[0]
-print(f'\nLeftLowArm:')
+print(f'\nLeftLowArm properties:')
 print(f'Position:\t{arm.pointToWorld((0,0,0))}')
 print(f'Y-Dir:\t\t{arm.UpWorld}')
 print(f'X-Dir:\t\t{arm.RightWorld}')
 
-# Position: vec3(       0.1606,       0.7002,       1.7672 ) Hips
-# Position: vec3(     0.166593,     0.800774,      1.79378 ) Chest
-# Position: vec3(     0.183282,      1.13198,      1.62304 ) Neck
-# Position: vec3(     0.201143,      1.16631,      1.52114 ) Head
-# Position: vec3(     0.160555,      1.07221,      1.61062 ) LeftCollar
-# Position: vec3(    0.0533372,      1.10009,      1.61253 ) LeftUpArm
-# Position: vec3(    -0.162209,      1.14091,      1.51718 ) LeftLowArm
-# Position: vec3(    -0.120072,      1.00391,      1.37971 ) LeftHand
-# Position: vec3(     0.205259,      1.07142,      1.61344 ) RightCollar
-# Position: vec3(     0.321048,      1.10524,      1.62711 ) RightUpArm
-# Position: vec3(     0.555624,      1.13019,      1.61172 ) RightLowArm
-# Position: vec3(     0.578145,      1.29305,      1.47631 ) RightHand
-# Position: vec3(    0.0851123,     0.699307,       1.7876 ) LeftUpLeg
-# Position: vec3(    0.0180001,     0.345904,      1.85933 ) LeftLowLeg
-# Position: vec3(  -0.00783825,     0.189567,      2.16848 ) LeftFoot
-# Position: vec3(     0.236088,     0.701093,       1.7468 ) RightUpLeg
-# Position: vec3(     0.296095,     0.398319,      1.57635 ) RightLowLeg
-# Position: vec3(     0.342655,    0.0917735,      1.72255 ) RightFoot
 
-# LeftLowArm:
-# Position:	vec3(    -0.162209,      1.14091,      1.51718 )
+# get position of joints within the space of the right leg
+# be aware of applied scaling here! Only the root joint has scaling in this example
+print(f'\nPositions in LeftUpLeg space:')
+rightleg = bvh.Hierarchy.select('LeftUpLeg')[0]
+for joint, index, depth in rightleg.layout():
+    worldPosition = joint.pointToWorld((0,0,0))
+    localPosition = rightleg.pointToLocal(worldPosition)
+    print(f'{localPosition} {joint.Name}')
+
+# Joint positions in world space:
+# vec3(       0.1606,       0.7002,       1.7672 ) Hips
+# vec3(     0.166593,     0.800774,      1.79378 ) Chest
+# vec3(     0.183282,      1.13198,      1.62304 ) Neck
+# vec3(     0.201143,      1.16631,      1.52114 ) Head
+# vec3(     0.160555,      1.07221,      1.61062 ) LeftCollar
+# vec3(    0.0533372,      1.10009,      1.61253 ) LeftUpArm
+# vec3(    -0.162209,      1.14091,      1.51718 ) LeftLowArm
+# vec3(    -0.120072,      1.00391,      1.37971 ) LeftHand
+# vec3(     0.205259,      1.07142,      1.61344 ) RightCollar
+# vec3(     0.321048,      1.10524,      1.62711 ) RightUpArm
+# vec3(     0.555624,      1.13019,      1.61172 ) RightLowArm
+# vec3(     0.578145,      1.29305,      1.47631 ) RightHand
+# vec3(    0.0851123,     0.699307,       1.7876 ) LeftUpLeg
+# vec3(    0.0180001,     0.345904,      1.85933 ) LeftLowLeg
+# vec3(  -0.00783825,     0.189567,      2.16848 ) LeftFoot
+# vec3(     0.236088,     0.701093,       1.7468 ) RightUpLeg
+# vec3(     0.296095,     0.398319,      1.57635 ) RightLowLeg
+# vec3(     0.342655,    0.0917735,      1.72255 ) RightFoot
+
+# LeftLowArm properties:
+# Position:	    vec3(    -0.162209,      1.14091,      1.51718 )
 # Y-Dir:		vec3(     0.912752,    -0.113158,      0.39253 )
 # X-Dir:		vec3(    -0.349097,      -0.7151,     0.605609 )
+
+# Positions in LeftUpLeg space:
+# vec3(  2.86102e-06,  -3.8147e-06,   3.8147e-06 ) LeftUpLeg
+# vec3(  4.52995e-06, -7.15256e-07,       -18.34 ) LeftLowLeg
+# vec3(     -2.87719,     -13.3042,     -29.1305 ) LeftFoot
+
 ```
 ### Compare pose data
 ```python
@@ -130,21 +148,21 @@ for (joint, index, depth) in bvh.Hierarchy.layout():
 
 # Change in position:
 # vec3(        -0.22,    0.0900002,        -1.89 ) Hips
-# vec3(     -0.18489,     0.127953,     -2.05244 ) Chest
-# vec3(     0.116602,    -0.506794,     -3.15424 ) Neck
-# vec3(     0.138187,    -0.853119,     -3.25434 ) Head
-# vec3(    0.0637407,    -0.521355,     -2.95226 ) LeftCollar
-# vec3(     0.311289,   0.00019455,     -3.98365 ) LeftUpArm
-# vec3(     0.415657,      1.54335,       -3.252 ) LeftLowArm
-# vec3(      0.13809,      2.18234,     -3.90731 ) LeftHand
-# vec3(    0.0625801,    -0.551456,     -2.94576 ) RightCollar
-# vec3(    -0.209536,    -0.523285,     -1.77232 ) RightUpArm
-# vec3(    -0.153286,     -1.66424,     -1.90514 ) RightLowArm
-# vec3(     0.919542,     -2.47902,     -2.54264 ) RightHand
-# vec3(    -0.259668,     0.188808,     -2.05069 ) LeftUpLeg
-# vec3(    -0.907879,    0.0389862,      -3.9713 ) LeftLowLeg
-# vec3(     0.584709,      0.22802,     -3.82487 ) LeftFoot
-# vec3(     -0.18033,  -0.00880814,     -1.72931 ) RightUpLeg
-# vec3(      0.10982,    -0.357864,    -0.960358 ) RightLowLeg
-# vec3(    0.0166397,    0.0537415,    -0.127296 ) RightFoot
+# vec3(    -0.219298,    0.0907593,     -1.89325 ) Chest
+# vec3(    -0.213268,     0.078064,     -1.91529 ) Neck
+# vec3(    -0.212836,    0.0711365,     -1.91729 ) Head
+# vec3(    -0.214325,     0.077774,     -1.91125 ) LeftCollar
+# vec3(    -0.209374,    0.0882034,     -1.93187 ) LeftUpArm
+# vec3(    -0.207287,     0.119064,     -1.91724 ) LeftLowArm
+# vec3(    -0.212839,     0.131844,     -1.93034 ) LeftHand
+# vec3(    -0.214348,    0.0771713,     -1.91111 ) RightCollar
+# vec3(    -0.219791,    0.0777321,     -1.88764 ) RightUpArm
+# vec3(    -0.218666,    0.0549126,      -1.8903 ) RightLowArm
+# vec3(    -0.197209,    0.0386162,     -1.90305 ) RightHand
+# vec3(    -0.220793,    0.0919762,     -1.89322 ) LeftUpLeg
+# vec3(    -0.233757,    0.0889778,     -1.93163 ) LeftLowLeg
+# vec3(    -0.203906,    0.0927582,      -1.9287 ) LeftFoot
+# vec3(    -0.219207,    0.0880241,     -1.88678 ) RightUpLeg
+# vec3(    -0.213404,    0.0810432,     -1.87141 ) RightLowLeg
+# vec3(    -0.215267,    0.0892754,     -1.85474 ) RightFoot
 ```
