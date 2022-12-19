@@ -1,54 +1,106 @@
 # bvhio
 Libary for reading [Biovision .bvh](https://research.cs.wisc.edu/graphics/Courses/cs-838-1999/Jeff/BVH.html) files and converting the data into a hierarchical spatial structure, as 3D apps would do it.
 
+This package is created for my master thesis and aims about integrety but not performance. For the most of the calculations the package [PyGLM](https://github.com/Zuzu-Typ/PyGLM) is used.
 ## Install
-```pip install bvhio```
+``` batch
+pip install bvhio
+ ```
 
 ## Features
 - Deserialize BVH into hierarchical structure.
 - Converts BVH data into proper hierarchical transforms like 3D apps.
+- Keeps deserialized BVH data.
 - Transforms data is converted to work without base pose.
 - Allows reading joint properties in local and world space.
-- Space is defined as: Y+ is Up and right handed like openGL
+- Space is defined as: Y+ is Up and right handed like openGL.
 - Transform logic uses the package [spatial-transform](https://github.com/Wasserwecken/spatial-transform)
 - Calculations are done with [PyGLM](https://github.com/Zuzu-Typ/PyGLM)
+- Python
+    - Every method is documented in code with docstrings
+    - Every method has type hinting
 
 ## Examples
-### Read, load and show data from a bvh file
+### Read bvh file
 ```python
 import bvhio
 
-# deserialize (https://research.cs.wisc.edu/graphics/Courses/cs-838-1999/Jeff/Example1.bvh)
 bvh = bvhio.read('example.bvh')
-print(bvh.Frames)
-print(bvh.FrameTime)
+print(f'Frames: {bvh.Frames}')
+print(f'Frame time: {bvh.FrameTime}')
+bvh.Hierarchy.printTree()
 
-# load first pose
+# Frames: 2
+# Frame time: 0.033333
+# Hips
+# +- Chest
+# |  +- Neck
+# |  |  +- Head
+# |  +- LeftCollar
+# |  |  +- LeftUpArm
+# |  |     +- LeftLowArm
+# |  |        +- LeftHand
+# |  +- RightCollar
+# |     +- RightUpArm
+# |        +- RightLowArm
+# |           +- RightHand
+# +- LeftUpLeg
+# |  +- LeftLowLeg
+# |     +- LeftFoot
+# +- RightUpLeg
+#    +- RightLowLeg
+#       +- RightFoot
+```
+
+### bvhio properties and methods
+```python
+bvh.Frames # Count of keyframes in the bvh
+bvh.FrameTime # Time per pose
+bvh.Hierarchy # Root joint of the skeleton definition.
+
+# lists all joints attached to the root and their childrens
+bvh.Hierarchy.layout()
+# Defines the base pose with the hierarchical joint data, including calculated bone orientation
+bvh.Hierarchy.DataBVH
+# this is this is the original motion data, rotation are converted to quaternions
+bvh.Hierarchy.DataBVH.Keyframes
+
+# motion data converted to pure local space. Independed of the base pose.
+bvh.Hierarchy.Keyframes
+# updates the transform and all its children to the given pose number.
 bvh.Hierarchy.readPose(0)
+# updates the motion data to change the keyframe permanently. Tis does NOT update the original BVH data!
+bvh.Hierarchy.writePose(0)
+```
 
-# show the world space position of all joints in the current pose
+### Read the hierarchy
+```python
+bvh.Hierarchy.readPose(0) # first the pose has to be set
+
+# get world space position of all joints
+for joint, index, depth in bvh.Hierarchy.layout():
+    print(f'Position: {joint.pointToWorld((0,0,0))} {joint.Name}')
+print()
+
+# read data for a single joint
+arm = bvh.Hierarchy.select('LeftLowArm', isEqual=True)[0]
+print(f'Position:\t{arm.pointToWorld((0,0,0))}')
+print(f'Y-Dir:\t\t{arm.UpWorld}')
+print(f'X-Dir:\t\t{arm.RightWorld}')
+```
+### Compare pose data
+```python
+# Loads the pose, then extracts from all joints their positions in world space
+pose0positions = [joint.pointToWorld((0,0,0)) for (joint, index, depth) in bvh.Hierarchy.readPose(0).layout()]
+pose1positions = [joint.pointToWorld((0,0,0)) for (joint, index, depth) in bvh.Hierarchy.readPose(1).layout()]
+
 for (joint, index, depth) in bvh.Hierarchy.layout():
-    print(joint.pointToWorld((0,0,0)), joint.ForwardWorld, joint.Name)
+    print(f'Diff: {pose1positions[index] - pose0positions[index]} {joint.Name}')
 
-# OUTPUT:
-# 2
-# 0.033333
-# vec3(         8.03,        35.01,        88.36 ) Hips
-# vec3(      8.32964,      40.0387,      89.6891 ) Chest
-# vec3(      9.16411,       56.599,      81.1521 ) Neck
-# vec3(      10.0571,      58.3157,      76.0571 ) Head
-# vec3(      8.02774,      53.6107,      80.5308 ) LeftCollar
-# vec3(      2.66686,      55.0047,      80.6263 ) LeftUpArm
-# vec3(     -8.11043,      57.0454,       75.859 ) LeftLowArm
-# vec3(     -6.00359,      50.1956,      68.9853 ) LeftHand
-# vec3(      10.2629,      53.5708,      80.6721 ) RightCollar
-# vec3(      16.0524,       55.262,      81.3554 ) RightUpArm
-# vec3(      27.7812,      56.5094,      80.5862 ) RightLowArm
-# vec3(      28.9073,      64.6527,      73.8156 ) RightHand
-# vec3(      4.25561,      34.9653,      89.3799 ) LeftUpLeg
-# vec3(     0.900007,      17.2952,      92.9663 ) LeftLowLeg
-# vec3(    -0.391914,      9.47834,      108.424 ) LeftFoot
-# vec3(      11.8044,      35.0547,      87.3401 ) RightUpLeg
-# vec3(      14.8047,       19.916,      78.8176 ) RightLowLeg
-# vec3(      17.1327,      4.58867,      86.1275 ) RightFoot
+
+# same code but different iteration approach
+for (joint, index, depth) in bvh.Hierarchy.layout():
+    pose0 = bvh.Hierarchy.readPose(0).pointToWorld((0,0,0))
+    pose1 = bvh.Hierarchy.readPose(1).pointToWorld((0,0,0))
+    print(f'Diff: {pose0 - pose1} {joint.Name}')
 ```

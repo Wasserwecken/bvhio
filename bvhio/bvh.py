@@ -1,5 +1,5 @@
 import glm
-import SpatialTransform as st
+from SpatialTransform import Transform
 
 class Pose:
     @property
@@ -23,7 +23,7 @@ class RootPose(Pose):
     Name:str
     Keyframes:list[Pose]
     Channels:list[str]
-    Children:list[object]
+    Children:list["RootPose"]
 
     def __init__(self, name:str = '', position: glm.vec3 = glm.vec3(), orientation: glm.quat = glm.quat()) -> None:
         super().__init__(position, orientation)
@@ -44,14 +44,14 @@ class RootPose(Pose):
     def getLength(self) -> float:
         return glm.length(self.GetTip())
 
-    def layout(self, index:int = 0, depth:int = 0) -> list[tuple[object, int, int]]:
+    def layout(self, index:int = 0, depth:int = 0) -> list[tuple["RootPose", int, int]]:
         result = [[self, index, depth]]
         for child in self.Children:
             result.extend(child.layout(result[-1][1] + 1, depth + 1))
         return result
 
 
-class Joint(st.Transform):
+class Joint(Transform):
     DataBVH:RootPose
     Keyframes:list[Pose]
 
@@ -60,9 +60,9 @@ class Joint(st.Transform):
         self.Keyframes = []
         self.DataBVH = dataBVH
         for childData in dataBVH.Children:
-            self.append(Joint(childData))
+            self.attach(Joint(childData))
 
-    def readPose(self, frame:int, recursive: bool = True, fromBVH:bool = False) -> None:
+    def readPose(self, frame:int, recursive: bool = True, fromBVH:bool = False) -> "Joint":
         if fromBVH:
             if frame < 0 or frame >= len(self.DataBVH.Keyframes):
                 raise ValueError(f'Frame number "{frame}" for {self.Name} is out of range. ({len(self.DataBVH.Keyframes)} Keyframes)')
@@ -77,7 +77,9 @@ class Joint(st.Transform):
         if recursive:
             for child in self.Children: child.readPose(frame, recursive, fromBVH)
 
-    def writePose(self, frame:int, recursive: bool = True) -> None:
+        return self
+
+    def writePose(self, frame:int, recursive: bool = True) -> "Joint":
         if frame < 0 or frame > len(self.Keyframes):
             raise ValueError(f'Frame number "{frame}" for {self.Name} is out of range.')
 
@@ -89,6 +91,8 @@ class Joint(st.Transform):
 
         if recursive:
             for child in self.Children: child.writePose(frame)
+
+        return self
 
 class BVH:
     Hierarchy:Joint
