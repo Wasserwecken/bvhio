@@ -114,7 +114,7 @@ print(f'X-Dir:\t\t{arm.RightWorld}')
 # Position: vec3(     0.342655,    0.0917735,      1.72255 ) RightFoot
 
 # LeftLowArm:
-# Position:	    vec3(    -0.162209,      1.14091,      1.51718 )
+# Position:	vec3(    -0.162209,      1.14091,      1.51718 )
 # Y-Dir:		vec3(     0.912752,    -0.113158,      0.39253 )
 # X-Dir:		vec3(    -0.349097,      -0.7151,     0.605609 )
 ```
