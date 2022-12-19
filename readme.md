@@ -62,7 +62,7 @@ bvh.Hierarchy # Root joint of the skeleton definition.
 bvh.Hierarchy.layout()
 # Defines the base pose with the hierarchical joint data, including calculated bone Rotation
 bvh.Hierarchy.DataBVH
-# this is this is the original motion data, rotation are converted to quaternions
+# this is this is the original motion data, rotations are converted to quaternions
 bvh.Hierarchy.DataBVH.Keyframes
 
 # motion data converted to pure local space. Independed of the base pose.
