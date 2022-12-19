@@ -78,12 +78,12 @@ bvh.Hierarchy.writePose(0)
 # Hierarchy is positioned and aligned by the keyframe
 bvh.Hierarchy.readPose(0)
 
-# scale root bone to have the value roughly match meters.
-# the root position has to be updated to the scale to if there is no root bone!
+# scale root bone to have the values roughly match meters.
+# the root position has to be updated to the scale too if there is no root bone!
 bvh.Hierarchy.Scale = (0.02, 0.02, 0.02)
 bvh.Hierarchy.Position *= bvh.Hierarchy.Scale
 
-# get world space position of all joints
+# get world space positions of all joints
 for joint, index, depth in bvh.Hierarchy.layout():
     print(f'Position: {joint.pointToWorld((0,0,0))} {joint.Name}')
 
@@ -114,7 +114,7 @@ print(f'X-Dir:\t\t{arm.RightWorld}')
 # Position: vec3(     0.342655,    0.0917735,      1.72255 ) RightFoot
 
 # LeftLowArm:
-# Position:	vec3(    -0.162209,      1.14091,      1.51718 )
+# Position:	    vec3(    -0.162209,      1.14091,      1.51718 )
 # Y-Dir:		vec3(     0.912752,    -0.113158,      0.39253 )
 # X-Dir:		vec3(    -0.349097,      -0.7151,     0.605609 )
 ```
