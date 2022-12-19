@@ -4,6 +4,7 @@ import numpy
 import errno
 from .bvh import *
 from io import TextIOWrapper
+from SpatialTransform import Euler
 
 def parseLine(file:TextIOWrapper, lineNumber:int) -> tuple[int, list[str], tuple[TextIOWrapper, int, int, str]]:
     lineNumber += 1
@@ -151,16 +152,17 @@ def deserializeKeyframe(data:list, debugInfo:tuple) -> numpy.ndarray:
 
 def deserializeMotion(joint:RootPose, data:numpy.ndarray, index = 0) -> int:
     position = glm.vec3(joint.Position)
-    Rotation = glm.quat()
+    rotation = glm.vec3(0)
+    rotOrder = ''
     for channel in joint.Channels:
         if 'Xposition' == channel: position.x = data[index]
         elif 'Yposition' == channel: position.y = data[index]
         elif 'Zposition' == channel: position.z = data[index]
-        elif 'Xrotation' == channel: Rotation = glm.rotate(Rotation, glm.radians(data[index]), (1,0,0))
-        elif 'Yrotation' == channel: Rotation = glm.rotate(Rotation, glm.radians(data[index]), (0,1,0))
-        elif 'Zrotation' == channel: Rotation = glm.rotate(Rotation, glm.radians(data[index]), (0,0,1))
+        elif 'Xrotation' == channel: rotation.x = data[index]; rotOrder += 'X'
+        elif 'Yrotation' == channel: rotation.y = data[index]; rotOrder += 'Y'
+        elif 'Zrotation' == channel: rotation.z = data[index]; rotOrder += 'Z'
         index += 1
-    joint.Keyframes.append(Pose(position, Rotation))
+    joint.Keyframes.append(Pose(position, Euler.toQuatFrom(glm.radians(rotation), rotOrder, False)))
 
     for child in joint.Children:
         index = deserializeMotion(child, data, index)
@@ -198,11 +200,9 @@ def writeHierarchy(file:TextIOWrapper, joint:Joint, indent:int, isFirst:bool, pe
     file.write(f'{" "*indent}}}\n')
 
 def writeMotion(file:TextIOWrapper, joint:Joint, frame:int, percision:int) -> None:
-    position = joint.Keyframes[frame].Position
-    Rotation = joint.Keyframes[frame].Rotation
-
     rotOrder = ''.join([rot[0] for rot in joint.Channels if rot[1:] == 'rotation'])
-    rotation = joint.getEuler(rotOrder)
+    rotation = joint.getEuler(rotOrder, extrinsic=False)
+    position = joint.Keyframes[frame].Position
 
     for channel in joint.Channels:
         if 'Xposition' == channel: file.write(f'{round(position.x, percision)} '); continue

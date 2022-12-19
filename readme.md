@@ -88,23 +88,6 @@ print('Joint positions in world space:')
 for joint, index, depth in bvh.Hierarchy.layout():
     print(f'{joint.pointToWorld((0,0,0))} {joint.Name}')
 
-# read data for a single joint
-arm = bvh.Hierarchy.select('LeftLowArm', isEqual=True)[0]
-print(f'\nLeftLowArm properties:')
-print(f'Position:\t{arm.pointToWorld((0,0,0))}')
-print(f'Y-Dir:\t\t{arm.UpWorld}')
-print(f'X-Dir:\t\t{arm.RightWorld}')
-
-
-# get position of joints within the space of the right leg
-# be aware of applied scaling here! Only the root joint has scaling in this example
-print(f'\nPositions in LeftUpLeg space:')
-rightleg = bvh.Hierarchy.select('LeftUpLeg')[0]
-for joint, index, depth in rightleg.layout():
-    worldPosition = joint.pointToWorld((0,0,0))
-    localPosition = rightleg.pointToLocal(worldPosition)
-    print(f'{localPosition} {joint.Name}')
-
 # Joint positions in world space:
 # vec3(       0.1606,       0.7002,       1.7672 ) Hips
 # vec3(     0.166593,     0.800774,      1.79378 ) Chest
@@ -124,17 +107,36 @@ for joint, index, depth in rightleg.layout():
 # vec3(     0.236088,     0.701093,       1.7468 ) RightUpLeg
 # vec3(     0.296095,     0.398319,      1.57635 ) RightLowLeg
 # vec3(     0.342655,    0.0917735,      1.72255 ) RightFoot
+```
+
+### Read joints
+```python
+# read data for a single joint
+arm = bvh.Hierarchy.filter('LeftLowArm', isEqual=True)[0]
+print(f'\nLeftLowArm properties:')
+print(f'Position:\t{arm.pointToWorld((0,0,0))}')
+print(f'Y-Dir:\t\t{arm.UpWorld}')
+print(f'X-Dir:\t\t{arm.RightWorld}')
+
+
+# get position of joints within the space of the right leg.
+# be aware of applied scaling here! Only the root joint has scaling in this example.
+print(f'\nPositions in LeftUpLeg space:')
+rightleg = bvh.Hierarchy.filter('LeftUpLeg')[0]
+for joint, index, depth in rightleg.layout():
+    worldPosition = joint.pointToWorld((0,0,0))
+    localPosition = rightleg.pointToLocal(worldPosition)
+    print(f'{localPosition} {joint.Name}')
 
 # LeftLowArm properties:
-# Position:	    vec3(    -0.162209,      1.14091,      1.51718 )
-# Y-Dir:		vec3(     0.912752,    -0.113158,      0.39253 )
-# X-Dir:		vec3(    -0.349097,      -0.7151,     0.605609 )
+# Position:	vec3(    -0.162209,      1.14091,      1.51718 )
+# Y-Dir:		vec3(     0.912751,    -0.113158,      0.39253 )
+# X-Dir:		vec3(    -0.349098,    -0.715101,     0.605609 )
 
 # Positions in LeftUpLeg space:
 # vec3(  2.86102e-06,  -3.8147e-06,   3.8147e-06 ) LeftUpLeg
 # vec3(  4.52995e-06, -7.15256e-07,       -18.34 ) LeftLowLeg
 # vec3(     -2.87719,     -13.3042,     -29.1305 ) LeftFoot
-
 ```
 ### Compare pose data
 ```python
