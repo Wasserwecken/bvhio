@@ -114,9 +114,9 @@ for joint, index, depth in bvh.Hierarchy.layout():
 # read data for a single joint
 arm = bvh.Hierarchy.filter('LeftLowArm', isEqual=True)[0]
 print(f'\nLeftLowArm properties:')
-print(f'Position:\t{arm.pointToWorld((0,0,0))}')
-print(f'Y-Dir:\t\t{arm.UpWorld}')
-print(f'X-Dir:\t\t{arm.RightWorld}')
+print(f'Position: {arm.pointToWorld((0,0,0))}')
+print(f'Y-Dir:    {arm.UpWorld}')
+print(f'X-Dir:    {arm.RightWorld}')
 
 
 # get position of joints within the space of the right leg.
@@ -129,9 +129,9 @@ for joint, index, depth in rightleg.layout():
     print(f'{localPosition} {joint.Name}')
 
 # LeftLowArm properties:
-# Position:	vec3(    -0.162209,      1.14091,      1.51718 )
-# Y-Dir:		vec3(     0.912751,    -0.113158,      0.39253 )
-# X-Dir:		vec3(    -0.349098,    -0.715101,     0.605609 )
+# Position: vec3(    -0.162209,      1.14091,      1.51718 )
+# Y-Dir:    vec3(     0.912751,    -0.113158,      0.39253 )
+# X-Dir:    vec3(    -0.349098,    -0.715101,     0.605609 )
 
 # Positions in LeftUpLeg space:
 # vec3(  2.86102e-06,  -3.8147e-06,   3.8147e-06 ) LeftUpLeg
