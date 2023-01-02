@@ -13,12 +13,12 @@ def parseLine(file:TextIOWrapper, lineNumber:int) -> tuple[int, list[str], tuple
     debugInfo = (file, lineNumber, len(line) - len(line.lstrip()) + len(tokens[0]), line)
     return (lineNumber, tokens, debugInfo)
 
-def read(path:str) -> BVH:
+def readAsBVH(path:str) -> BVH:
     """Reads an .bvh file"""
     if not os.path.exists(path):
         raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), path)
 
-    result = BVH()
+    bvh = BVH()
     with open(path, "r") as file:
         # check for 'HIERARCHY' start
         line, tokens, debugInfo = parseLine(file, 0)
@@ -29,38 +29,48 @@ def read(path:str) -> BVH:
         line, tokens, debugInfo = parseLine(file, line)
         if tokens[0] != 'ROOT':
             raise SyntaxError('First Joint must be defined as "ROOT"', debugInfo)
-        bvhHierarchy = parseJoint(file, deserializeJointName(tokens, debugInfo))
+        bvh.Root = parseJoint(file, deserializeJointName(tokens, debugInfo))
 
         # check for 'MOTION' start
         line, tokens, debugInfo = parseLine(file, line)
         if not tokens[0] == 'MOTION' or not len(tokens) == 1:
             raise SyntaxError('After end of hierarchy must follow "MOTION"', debugInfo)
 
+        # check for frame count
+        line, tokens, debugInfo = parseLine(file, line)
+        if not tokens[0] == 'Frames:' or not len(tokens) == 2:
+            raise SyntaxError('First line of "MOTION" section has to be "Frames: X"', debugInfo)
+        else:
+            bvh.FrameCount = deserializeFrameCount(tokens[1:], debugInfo)
+
+        # check for frame rate
+        line, tokens, debugInfo = parseLine(file, line)
+        if not tokens[0] == 'Frame' or not len(tokens) == 3:
+            raise SyntaxError('After frame count must follow "Frame Time"', debugInfo)
+        else:
+            bvh.FrameTime = deserializeFrameTime(tokens[2:], debugInfo)
+
         # parse motion data
-        while(True):
-            try:
-                line, tokens, debugInfo = parseLine(file, line)
-                if 'Frames' in tokens[0]:
-                    pass
-                elif len(tokens) == 3 and tokens[0] == 'Frame':
-                    result.FrameTime = deserializeFrameTime(tokens[2:], debugInfo)
-                else:
-                    ## add keyframe to joints
-                    deserializeMotion(bvhHierarchy, deserializeKeyframe(tokens, debugInfo))
-            except:
-                break
+        for _ in range(bvh.FrameCount):
+            line, tokens, debugInfo = parseLine(file, line)
+            deserializeMotion(bvh.Root, deserializeKeyframe(tokens, debugInfo))
 
-        # create a copy of the defined hierarchy with transforms
-        result.Hierarchy = Joint(bvhHierarchy)
+        return bvh
 
-        # convert the motion data into local space data respecting the root pose
-        result.Hierarchy.Keyframes.clear()
-        for frame in range(len(result.Hierarchy.DataBVH.Keyframes)):
-            result.Hierarchy.readPose(frame, fromBVH=True)
-            convertBVHMotion(result.Hierarchy, frame)
-            result.Hierarchy.writePose(frame)
+def convertBvhToJoint(pose:RootPose) -> Joint:
+    joint = Joint(pose.Name, pose.Offset, pose.getRotation())
+    joint.Keyframes = [Pose(f.Position, f.Rotation * joint.Rotation) for f in pose.Keyframes]
 
-        return result
+    for child in pose.Children:
+        child = convertBvhToJoint(child)
+        for frame in child.Keyframes:
+            frame.Position = glm.inverse(joint.Rotation) * frame.Position
+            frame.Rotation = glm.inverse(joint.Rotation) * frame.Rotation
+        joint.attach(child)
+    return joint
+
+def read(path:str) -> Joint:
+    return convertBvhToJoint(readAsBVH(path).Root)
 
 def parseJoint(file:TextIOWrapper, name:str, line:int = 0) -> RootPose:
     # check for open bracket
@@ -70,28 +80,20 @@ def parseJoint(file:TextIOWrapper, name:str, line:int = 0) -> RootPose:
 
     # create joint and read channels and offeset
     joint = RootPose(name)
-    joint.Position = deserializeOffset(file, line)
+    joint.Offset = deserializeOffset(file, line)
     joint.Channels = deserializeChannles(file, line)
 
     # check for definition end or child joints or end site info
-    tipPos = glm.vec3()
     while(True):
         line, tokens, debugInfo = parseLine(file, line)
         if tokens[0] == 'JOINT':
             joint.Children.append(parseJoint(file, deserializeJointName(tokens, debugInfo), line))
         elif tokens[0] == 'End':
-            tipPos = deserializeEndSite(file, line)
+            joint.EndSite = deserializeEndSite(file, line)
         elif tokens[0] == '}':
             break
         else:
             raise SyntaxError('Joint definition must end with an child joint, end site or closing bracket', debugInfo)
-
-    # calculate bone Rotation based on local tip position
-    tipDir = glm.normalize(joint.getTip(tipPos))
-    tipAxis = glm.vec3(0, 0, 1)
-    tipDot = glm.abs(glm.dot(tipDir, tipAxis))
-    if tipDot > 0.999: tipAxis = glm.vec3(1, 0, 0)
-    joint.Rotation = glm.quatLookAtRH(tipDir, tipAxis)
 
     # return deserialized joint root pose
     return joint
@@ -144,6 +146,14 @@ def deserializeFrameTime(data:list, debugInfo:tuple) -> float:
     except ValueError:
         raise SyntaxError('Frame time be numerical', debugInfo)
 
+def deserializeFrameCount(data:list, debugInfo:tuple) -> float:
+    if not isinstance(data, list) or len(data) != 1:
+        raise SyntaxError('Frame count must be a 1-dimensional tuple', debugInfo)
+    try:
+        return int(data[0])
+    except ValueError:
+        raise SyntaxError('Frame time be numerical', debugInfo)
+
 def deserializeKeyframe(data:list, debugInfo:tuple) -> numpy.ndarray:
     try:
         return numpy.array(list(map(float, data)))
@@ -151,9 +161,10 @@ def deserializeKeyframe(data:list, debugInfo:tuple) -> numpy.ndarray:
         raise SyntaxError('Keyframe must be numerics only', debugInfo)
 
 def deserializeMotion(joint:RootPose, data:numpy.ndarray, index = 0) -> int:
-    position = glm.vec3(joint.Position)
+    position = glm.vec3(joint.Offset)
     rotation = glm.vec3(0)
     rotOrder = ''
+
     for channel in joint.Channels:
         if 'Xposition' == channel: position.x = data[index]
         elif 'Yposition' == channel: position.y = data[index]
@@ -167,11 +178,6 @@ def deserializeMotion(joint:RootPose, data:numpy.ndarray, index = 0) -> int:
     for child in joint.Children:
         index = deserializeMotion(child, data, index)
     return index
-
-def convertBVHMotion(joint:Joint, frame:int) -> None:
-    joint.applyRotation(joint.DataBVH.Rotation)
-    for child in joint.Children:
-        convertBVHMotion(child, frame)
 
 def write(path:str, bvh:BVH, percision:int = 9) -> None:
     with open(path, "w") as file:
