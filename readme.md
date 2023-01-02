@@ -25,10 +25,15 @@ pip install bvhio
 ```python
 import bvhio
 
-bvh = bvhio.read('example.bvh')
-print(f'Frames: {bvh.Frames}')
+# read the file into a deserialized structure
+bvh = bvhio.readAsBVH('example.bvh')
+print(f'Frames: {bvh.FrameCount}')
 print(f'Frame time: {bvh.FrameTime}')
-bvh.Hierarchy.printTree()
+
+# get the bvh data as a hierarchy of transforms. Those lines have a identical result
+hierarchy = bvhio.convertBvhToJoint(bvh.Root)
+hierarchy = bvhio.read('example.bvh')
+hierarchy.printTree()
 
 # Frames: 2
 # Frame time: 0.033333
@@ -54,38 +59,43 @@ bvh.Hierarchy.printTree()
 
 ### bvhio properties and methods
 ```python
-bvh.Frames # Count of keyframes in the bvh
-bvh.FrameTime # Time per pose
-bvh.Hierarchy # Root joint of the skeleton definition.
+# BVH structure
+bvh.FrameCount          # Count of keyframes in the bvh.Hierarchy
+bvh.FrameTime           # Time per pose.
+bvh.Root                # Root joint of the skeleton definition.
 
-# lists all joints attached to the root and their childrens
-bvh.Hierarchy.layout()
-# Defines the base pose with the hierarchical joint data, including calculated bone Rotation
-bvh.Hierarchy.DataBVH
-# this is this is the original motion data, rotations are converted to quaternions
-bvh.Hierarchy.DataBVH.Keyframes
+# BVH bone hierarchy structure
+bvh.Root.Offset         # Offset of the root pose.
+bvh.Root.Channels       # Channels that are controlled by the MOTION data.
+bvh.Root.Children       # Child bones.
+bvh.Root.Keyframes      # Keyframe data from the MOTION section.
+bvh.Root.getTip()       # Calculates the local tip position.
+bvh.Root.getLength()    # Calculates the length of the bone.
+bvh.Root.getRotation()  # Calculates the orientation of the bone.
+bvh.Root.layout()       # List of the bones and this children recursivly.
 
-# motion data converted to pure local space. Independed of the base pose.
-bvh.Hierarchy.Keyframes
-# updates the transform and all its children to the given pose number.
-bvh.Hierarchy.readPose(0)
-# updates the motion data to change the keyframe permanently. Tis does NOT update the original BVH data!
-bvh.Hierarchy.writePose(0)
+# Hierarchy bone hierarchy structure.
+# Hierarchy has as base the type "Transfrom" from Spatial-Transform lib,
+# so the structure inherit a lot of transform properties like Position, Rotation and Forward.
+hierarchy.Keyframes     # Motion data represented as local space data, independed of a root pose.
+hierarchy.layout()      # lists all joints attached to the root and their childrens.
+hierarchy.readPose(0)   # Applies the pose data from keyframes to the transform and may to its children.
+hierarchy.writePose(0)  # Sets the pose data in the keyframes. THis changes the animation.
 ```
 
 ### Read the hierarchy
 ```python
 # Hierarchy is positioned and aligned by the keyframe
-bvh.Hierarchy.readPose(0)
+hierarchy.readPose(0)
 
 # scale root bone to have the value roughly match meters.
 # the root position has to be updated to the scale too!
-bvh.Hierarchy.Scale = (0.02, 0.02, 0.02)
-bvh.Hierarchy.Position *= bvh.Hierarchy.Scale
+hierarchy.Scale = (0.02, 0.02, 0.02)
+hierarchy.Position *= hierarchy.Scale
 
 # get world space position of all joints
 print('Joint positions in world space:')
-for joint, index, depth in bvh.Hierarchy.layout():
+for joint, index, depth in hierarchy.layout():
     print(f'{joint.pointToWorld((0,0,0))} {joint.Name}')
 
 # Joint positions in world space:
@@ -112,17 +122,16 @@ for joint, index, depth in bvh.Hierarchy.layout():
 ### Read joints
 ```python
 # read data for a single joint
-arm = bvh.Hierarchy.filter('LeftLowArm', isEqual=True)[0]
+arm = hierarchy.filter('LeftLowArm', isEqual=True)[0]
 print(f'\nLeftLowArm properties:')
 print(f'Position: {arm.pointToWorld((0,0,0))}')
 print(f'Y-Dir:    {arm.UpWorld}')
 print(f'X-Dir:    {arm.RightWorld}')
 
-
 # get position of joints within the space of the right leg.
 # be aware of applied scaling here! Only the root joint has scaling in this example.
 print(f'\nPositions in LeftUpLeg space:')
-rightleg = bvh.Hierarchy.filter('LeftUpLeg')[0]
+rightleg = hierarchy.filter('LeftUpLeg')[0]
 for joint, index, depth in rightleg.layout():
     worldPosition = joint.pointToWorld((0,0,0))
     localPosition = rightleg.pointToLocal(worldPosition)
@@ -141,11 +150,11 @@ for joint, index, depth in rightleg.layout():
 ### Compare pose data
 ```python
 # Loads the pose, then extracts from all joints their positions in world space
-pose0positions = [joint.pointToWorld((0,0,0)) for (joint, index, depth) in bvh.Hierarchy.readPose(0).layout()]
-pose1positions = [joint.pointToWorld((0,0,0)) for (joint, index, depth) in bvh.Hierarchy.readPose(1).layout()]
+pose0positions = [joint.pointToWorld((0,0,0)) for (joint, index, depth) in hierarchy.readPose(0).layout()]
+pose1positions = [joint.pointToWorld((0,0,0)) for (joint, index, depth) in hierarchy.readPose(1).layout()]
 
 print('Change in position:')
-for (joint, index, depth) in bvh.Hierarchy.layout():
+for (joint, index, depth) in hierarchy.layout():
     print(f'{pose1positions[index] - pose0positions[index]} {joint.Name}')
 
 # Change in position:
