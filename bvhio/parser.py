@@ -66,7 +66,7 @@ def convertBvhToJoint(pose:RootPose) -> Joint:
         for frame in child.Keyframes:
             frame.Position = glm.inverse(joint.Rotation) * frame.Position
             frame.Rotation = glm.inverse(joint.Rotation) * frame.Rotation
-        joint.attach(child)
+        joint.attach(child, keepPosition=False, keepRotation=False, keepScale=False)
     return joint
 
 def read(path:str) -> Joint:

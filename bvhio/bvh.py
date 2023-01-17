@@ -150,33 +150,36 @@ class Joint(Transform):
                 child.writePose(frame)
         return self
 
-    def attach(self, *nodes: "Joint", keepPosition: bool = False, keepRotation: bool = False, keepScale: bool = False) -> "Joint":
+    def attach(self, *nodes: "Joint", keepPosition: bool = True, keepRotation: bool = True, keepScale: bool = True) -> "Joint":
+        _, wsRotation, wsScale, _, _ = self.decomposeSpaceWorldInverse()
         for node in nodes:
             # attach the joint
             super().attach(node, keepPosition=keepPosition, keepRotation=keepRotation, keepScale=keepScale)
 
             # apply attach corrections to animation data
             for pose in node.Keyframes:
-                if keepPosition: pose.Position = self.pointToLocal(pose.Position)
-                if keepRotation: pose.Rotation = pose.Rotation * (glm.inverse(self.Rotation))
-                if keepScale: pose.Scale = pose.Scale * (1 / self.Scale)
+                if keepPosition: pose.Position = self.SpaceWorldInverse * pose.Position
+                if keepRotation: pose.Rotation = wsRotation * pose.Rotation
+                if keepScale: pose.Scale = wsScale * pose.Scale
         return self
 
-    def detach(self, node: "Joint", keepPosition: bool = False, keepRotation: bool = False, keepScale: bool = False) -> "Joint":
+    def detach(self, node: "Joint", keepPosition: bool = True, keepRotation: bool = True, keepScale: bool = True) -> "Joint":
+        _, wsRotation, wsScale, _, _ = self.decomposeSpaceWorld()
+
         # apply detach corrections to animation data
         for pose in node._Keyframes:
-            if keepPosition: pose.Position = self.pointToWorld(node.Position)
-            if keepRotation: pose.Rotation = pose.Rotation * self.Rotation
-            if keepScale: pose.Scale = pose.Scale * self.Scale
+            if keepPosition: pose.Position = self.SpaceWorld * pose.Position
+            if keepRotation: pose.Rotation = wsRotation * pose.Rotation
+            if keepScale: pose.Scale = wsScale * pose.Scale
 
         # finally detatch the joint
         return super().detach(node, keepPosition, keepRotation, keepScale)
 
 
-    def clearParent(self, keepPosition: bool = False, keepRotation: bool = False, keepScale: bool = False) -> "Joint":
+    def clearParent(self, keepPosition: bool = True, keepRotation: bool = True, keepScale: bool = True) -> "Joint":
         return super().clearParent(keepPosition, keepRotation, keepScale)
 
-    def clearChildren(self, keepPosition: bool = False, keepRotation: bool = False, keepScale: bool = False) -> "Joint":
+    def clearChildren(self, keepPosition: bool = True, keepRotation: bool = True, keepScale: bool = True) -> "Joint":
         return super().clearChildren(keepPosition, keepRotation, keepScale)
 
 
@@ -193,14 +196,14 @@ class Joint(Transform):
 
         super().appyScale(scale, recursive=False, includeLocal=includeLocal)
 
-        for pose in self.Keyframes:
+        for pose in self._Keyframes:
             pose.Scale *= glm.div(scale, change)
             if includeLocal:
                 pose.Position *= change
 
 
         for child in self._Children:
-            for pose in child.Keyframes:
+            for pose in child._Keyframes:
                 pose.Position *= change
                 pose.Scale *= change
 
@@ -208,6 +211,16 @@ class Joint(Transform):
                 child.appyScale(recursive=True, includeLocal=False)
 
         return self
+
+    def filter(self, pattern: str, isEqual: bool = False, caseSensitive: bool = False) -> list["Joint"]:
+        return super().filter(pattern, isEqual, caseSensitive)
+
+    def filterRegex(self, pattern: str) -> list["Joint"]:
+        return super().filterRegex(pattern)
+
+    def layout(self, index: int = 0, depth: int = 0) -> list[tuple["Joint", int, int]]:
+        return super().layout(index, depth)
+
 
 class BVH:
     """Container for the information of the bvh file.
