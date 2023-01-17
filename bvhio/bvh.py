@@ -183,36 +183,53 @@ class Joint(Transform):
         return super().clearChildren(keepPosition, keepRotation, keepScale)
 
 
-    def applyPosition(self, position: glm.vec3 = None, recursive: bool = False) -> "Joint":
-        raise NotImplementedError
-        return super().applyPosition(position, recursive)
+    def applyPosition(self, position:glm.vec3 = glm.vec3()) -> "Joint":
+        change = self.Position + position
+        super().applyPosition(position)
 
-    def applyRotation(self, rotation: glm.quat = None, recursive: bool = False) -> "Joint":
-        raise NotImplementedError
-        return super().applyRotation(rotation, recursive)
+        for pose in self._Keyframes:
+            pose.Position = -change + pose.Rotation
+        for child in self._Children:
+            for pose in child._Keyframes:
+                pose.Position = change + pose.Position
+
+        return self
+
+    def applyRotation(self, rotation:glm.quat = glm.quat(), recursive:bool = False, includeLocal:bool = False) -> "Joint":
+        change = rotation * self.Rotation
+        super().applyRotation(rotation, recursive=False, includeLocal=includeLocal)
+
+        for pose in self._Keyframes:
+            pose.Rotation = glm.inverse(change) * pose.Rotation
+            if includeLocal:
+                pose.Position = change * pose.Position
+        for child in self._Children:
+            for pose in child._Keyframes:
+                pose.Position = change * pose.Position
+                pose.Rotation = change * pose.Rotation
+            if recursive:
+                child.applyRotation(recursive=True, includeLocal=False)
+
+        return self
 
     def appyScale(self, scale:glm.vec3 = glm.vec3(1), recursive:bool = False, includeLocal:bool = False) -> "Joint":
         change = self.Scale * scale
-
         super().appyScale(scale, recursive=False, includeLocal=includeLocal)
 
         for pose in self._Keyframes:
             pose.Scale *= glm.div(scale, change)
             if includeLocal:
                 pose.Position *= change
-
-
         for child in self._Children:
             for pose in child._Keyframes:
                 pose.Position *= change
                 pose.Scale *= change
-
             if recursive:
                 child.appyScale(recursive=True, includeLocal=False)
 
         return self
 
-    def filter(self, pattern: str, isEqual: bool = False, caseSensitive: bool = False) -> list["Joint"]:
+    def filter(self, pattern:str, isEqual:bool = False, caseSensitive: bool = False) -> list["Joint"]:
         return super().filter(pattern, isEqual, caseSensitive)
 
     def filterRegex(self, pattern: str) -> list["Joint"]:
