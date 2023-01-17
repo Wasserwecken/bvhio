@@ -14,12 +14,21 @@ class Pose:
     @Rotation.setter
     def Rotation(self, value:glm.quat) -> None: self._Rotation = glm.quat(value)
 
-    def __init__(self, position:glm.vec3 = glm.vec3(), Rotation:glm.quat = glm.quat()) -> None:
+    @property
+    def Scale(self) -> glm.vec3: return glm.vec3(self._Scale)
+    @Scale.setter
+    def Scale(self, value:glm.vec3) -> None: self._Scale = glm.vec3(value)
+
+    def __init__(self, position:glm.vec3 = glm.vec3(), rotation:glm.quat = glm.quat(), scale:glm.vec3 = glm.vec3(1)) -> None:
         self._Position = glm.vec3(position)
-        self._Rotation = glm.quat(Rotation)
+        self._Rotation = glm.quat(rotation)
+        self._Scale = glm.vec3(scale)
 
     def __repr__(self) -> str:
-        return (f"Pos: {self.Position}, Rot: {self.Rotation}")
+        return (f"Pos: {self.Position}, Rot: {self.Rotation}, Scale: {self.Scale}")
+
+    def __str__(self) -> str:
+        return self.__repr__()
 
 class RootPose:
     """Data structure for the bvh skeleton definition. Contains the attributes as in the BVH file.
@@ -42,6 +51,9 @@ class RootPose:
 
     def __repr__(self) -> str:
         return (f"{self.Name}")
+
+    def __str__(self) -> str:
+        return self.__repr__()
 
     def getTip(self) -> glm.vec3:
         """Calculates the tip of the defined bone.
@@ -81,6 +93,15 @@ class Joint(Transform):
     Keyframes holding the converted motion data, where position and rotation are in local space, in cluding the bvh base pose"""
 
     @property
+    def Parent(self) -> "Joint": return self._Parent
+
+    @property
+    def Children(self) -> list["Joint"]: return self._Children
+
+    @property
+    def CurrentFrame(self) -> int: return self._CurrentFrame
+
+    @property
     def Keyframes(self) -> list[Pose]: return self._Keyframes
     @Keyframes.setter
     def Keyframes(self, value:list[Pose]) -> None: self._Keyframes = list(value)
@@ -88,6 +109,9 @@ class Joint(Transform):
     def __init__(self, name:str, position:glm.vec3 = glm.vec3(), rotation:glm.quat = glm.quat(), scale:glm.vec3 = glm.vec3(1)) -> None:
         super().__init__(name, position, rotation)
         self._Keyframes:list[Pose] = []
+        self._Parent:"Joint" = None
+        self._Children:list["Joint"] = []
+        self._CurrentFrame = -1
 
     def readPose(self, frame:int, recursive: bool = True) -> "Joint":
         """Sets the transform position and rotation properties by the given keyframe.
@@ -95,8 +119,11 @@ class Joint(Transform):
         If recursive the children do also load their keyframe data."""
         if frame < 0 or frame >= len(self._Keyframes):
             raise ValueError(f'Frame number "{frame}" for {self.Name} is out of range. ({len(self._Keyframes)} Keyframes)')
+
+        self._CurrentFrame = frame
         self.Position = self._Keyframes[frame].Position
         self.Rotation = self._Keyframes[frame].Rotation
+        self.Scale = self._Keyframes[frame].Scale
 
         if recursive:
             for child in self.Children:
@@ -113,6 +140,8 @@ class Joint(Transform):
         elif frame < len(self._Keyframes):
             self._Keyframes[frame].Position = self.Position
             self._Keyframes[frame].Rotation = self.Rotation
+            self._Keyframes[frame].Scale = self.Scale
+
         elif frame == len(self._Keyframes):
             self._Keyframes.append(Pose(self.Position, self.Rotation))
 
@@ -130,6 +159,7 @@ class Joint(Transform):
             for pose in node.Keyframes:
                 if keepPosition: pose.Position = self.pointToLocal(pose.Position)
                 if keepRotation: pose.Rotation = pose.Rotation * (glm.inverse(self.Rotation))
+                if keepScale: pose.Scale = pose.Scale * (1 / self.Scale)
         return self
 
     def detach(self, node: "Joint", keepPosition: bool = False, keepRotation: bool = False, keepScale: bool = False) -> "Joint":
@@ -137,9 +167,47 @@ class Joint(Transform):
         for pose in node._Keyframes:
             if keepPosition: pose.Position = self.pointToWorld(node.Position)
             if keepRotation: pose.Rotation = pose.Rotation * self.Rotation
+            if keepScale: pose.Scale = pose.Scale * self.Scale
 
         # finally detatch the joint
         return super().detach(node, keepPosition, keepRotation, keepScale)
+
+
+    def clearParent(self, keepPosition: bool = False, keepRotation: bool = False, keepScale: bool = False) -> "Joint":
+        return super().clearParent(keepPosition, keepRotation, keepScale)
+
+    def clearChildren(self, keepPosition: bool = False, keepRotation: bool = False, keepScale: bool = False) -> "Joint":
+        return super().clearChildren(keepPosition, keepRotation, keepScale)
+
+
+    def applyPosition(self, position: glm.vec3 = None, recursive: bool = False) -> "Joint":
+        raise NotImplementedError
+        return super().applyPosition(position, recursive)
+
+    def applyRotation(self, rotation: glm.quat = None, recursive: bool = False) -> "Joint":
+        raise NotImplementedError
+        return super().applyRotation(rotation, recursive)
+
+    def appyScale(self, scale:glm.vec3 = glm.vec3(1), recursive:bool = False, includeLocal:bool = False) -> "Joint":
+        change = self.Scale * scale
+
+        super().appyScale(scale, recursive=False, includeLocal=includeLocal)
+
+        for pose in self.Keyframes:
+            pose.Scale *= glm.div(scale, change)
+            if includeLocal:
+                pose.Position *= change
+
+
+        for child in self._Children:
+            for pose in child.Keyframes:
+                pose.Position *= change
+                pose.Scale *= change
+
+            if recursive:
+                child.appyScale(recursive=True, includeLocal=False)
+
+        return self
 
 class BVH:
     """Container for the information of the bvh file.
