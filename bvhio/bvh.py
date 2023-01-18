@@ -71,11 +71,13 @@ class RootPose:
 
     def getRotation(self) -> glm.quat:
         """calculate the bone rotation based on the tip."""
-        tipDir = glm.normalize(self.getTip())
-        tipAxis = glm.vec3(0, 0, 1)
-        tipDot = glm.abs(glm.dot(tipDir, tipAxis))
-        if tipDot > 0.999: tipAxis = glm.vec3(1, 0, 0)
-        return glm.quatLookAtRH(tipDir, tipAxis)
+        # https://arrowinmyknee.com/2021/02/10/how-to-get-rotation-from-two-vectors/
+        dir = glm.normalize(self.getTip())
+        axis = glm.vec3(0, 1, 0)
+        dot = glm.dot(axis, dir)
+
+        if dot < -0.999: return glm.quat(0,0,0,1)
+        return glm.angleAxis(glm.acos(dot), glm.cross(axis, dir))
 
     def layout(self, index:int = 0, depth:int = 0) -> list[tuple["RootPose", int, int]]:
         """Returns the hierarchical layout of this joint and its children recursivly."""
@@ -107,7 +109,7 @@ class Joint(Transform):
     def Keyframes(self, value:list[Pose]) -> None: self._Keyframes = list(value)
 
     def __init__(self, name:str, position:glm.vec3 = glm.vec3(), rotation:glm.quat = glm.quat(), scale:glm.vec3 = glm.vec3(1)) -> None:
-        super().__init__(name, position, rotation)
+        super().__init__(name, position, rotation, scale)
         self._Keyframes:list[Pose] = []
         self._Parent:"Joint" = None
         self._Children:list["Joint"] = []
