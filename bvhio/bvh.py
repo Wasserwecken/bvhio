@@ -159,7 +159,7 @@ class Joint(Transform):
             super().attach(node, keepPosition=keepPosition, keepRotation=keepRotation, keepScale=keepScale)
 
             # apply attach corrections to animation data
-            for pose in node.Keyframes:
+            for pose in node._Keyframes:
                 if keepPosition: pose.Position = self.SpaceWorldInverse * pose.Position
                 if keepRotation: pose.Rotation = wsRotation * pose.Rotation
                 if keepScale: pose.Scale = wsScale * pose.Scale
@@ -228,6 +228,27 @@ class Joint(Transform):
                 pose.Scale *= change
             if recursive:
                 child.appyScale(recursive=True, includeLocal=False)
+
+        return self
+
+    def roll(self, degrees:float, recursive:bool = False) -> "Joint":
+        """Rolls the joint along its local Y axis. Updates the children so there is no spatial change
+
+        Returns itself"""
+        change = glm.angleAxis(glm.radians(degrees), (0,1,0))
+        changeInverse = glm.inverse(change)
+
+        self.Rotation = self.Rotation * change
+        for pose in self._Keyframes:
+            pose.Rotation = pose.Rotation * change
+
+        for child in self._Children:
+            child.Position = changeInverse * child.Position
+            child.Rotation = changeInverse * child.Rotation
+            for pose in child._Keyframes:
+                pose.Position = changeInverse * pose.Position
+                pose.Rotation = changeInverse * pose.Rotation
+            if recursive: child.roll(degrees, recursive=True)
 
         return self
 
