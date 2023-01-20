@@ -124,9 +124,9 @@ class Joint(Transform):
             raise ValueError(f'Frame number "{frame}" for {self.Name} is out of range. ({len(self._Keyframes)} Keyframes)')
 
         self._CurrentFrame = frame
-        self.Position = self._Keyframes[frame].Position
-        self.Rotation = self._Keyframes[frame].Rotation
-        self.Scale = self._Keyframes[frame].Scale
+        self.PositionLocal = self._Keyframes[frame].Position
+        self.RotationLocal = self._Keyframes[frame].Rotation
+        self.ScaleLocal = self._Keyframes[frame].Scale
 
         if recursive:
             for child in self.Children:
@@ -142,12 +142,12 @@ class Joint(Transform):
             raise ValueError(f'Frame number "{frame}" for {self.Name} is out of range.')
 
         elif frame < len(self._Keyframes):
-            self._Keyframes[frame].Position = self.Position
-            self._Keyframes[frame].Rotation = self.Rotation
-            self._Keyframes[frame].Scale = self.Scale
+            self._Keyframes[frame].Position = self.PositionLocal
+            self._Keyframes[frame].Rotation = self.RotationLocal
+            self._Keyframes[frame].Scale = self.ScaleLocal
 
         elif frame == len(self._Keyframes):
-            self._Keyframes.append(Pose(self.Position, self.Rotation))
+            self._Keyframes.append(Pose(self.PositionLocal, self.RotationLocal))
 
         if recursive:
             for child in self.Children:
@@ -155,7 +155,6 @@ class Joint(Transform):
         return self
 
     def attach(self, *nodes: "Joint", keepPosition: bool = True, keepRotation: bool = True, keepScale: bool = True) -> "Joint":
-        _, wsRotation, wsScale, _, _ = self.decomposeSpaceWorldInverse()
         for node in nodes:
             # attach the joint
             super().attach(node, keepPosition=keepPosition, keepRotation=keepRotation, keepScale=keepScale)
@@ -163,18 +162,17 @@ class Joint(Transform):
             # apply attach corrections to animation data
             for pose in node._Keyframes:
                 if keepPosition: pose.Position = self.SpaceWorldInverse * pose.Position
-                if keepRotation: pose.Rotation = wsRotation * pose.Rotation
-                if keepScale: pose.Scale = wsScale * pose.Scale
+                if keepRotation: pose.Rotation = self.RotationWorldInverse * pose.Rotation
+                if keepScale: pose.Scale = self.ScaleWorldInverse * pose.Scale
         return self
 
     def detach(self, node: "Joint", keepPosition: bool = True, keepRotation: bool = True, keepScale: bool = True) -> "Joint":
-        _, wsRotation, wsScale, _, _ = self.decomposeSpaceWorld()
 
         # apply detach corrections to animation data
         for pose in node._Keyframes:
             if keepPosition: pose.Position = self.SpaceWorld * pose.Position
-            if keepRotation: pose.Rotation = wsRotation * pose.Rotation
-            if keepScale: pose.Scale = wsScale * pose.Scale
+            if keepRotation: pose.Rotation = self.RotationWorld * pose.Rotation
+            if keepScale: pose.Scale = self.ScaleWorld * pose.Scale
 
         # finally detatch the joint
         return super().detach(node, keepPosition, keepRotation, keepScale)
@@ -200,7 +198,7 @@ class Joint(Transform):
         return self
 
     def applyRotation(self, rotation:glm.quat = glm.quat(), recursive:bool = False, includeLocal:bool = False) -> "Joint":
-        change = rotation * self.Rotation
+        change = rotation * self.RotationLocal
         super().applyRotation(rotation, recursive=False, includeLocal=includeLocal)
 
         for pose in self._Keyframes:
@@ -217,7 +215,7 @@ class Joint(Transform):
         return self
 
     def appyScale(self, scale:glm.vec3 = glm.vec3(1), recursive:bool = False, includeLocal:bool = False) -> "Joint":
-        change = self.Scale * scale
+        change = self.ScaleLocal * scale
         super().appyScale(scale, recursive=False, includeLocal=includeLocal)
 
         for pose in self._Keyframes:
@@ -240,13 +238,13 @@ class Joint(Transform):
         change = glm.angleAxis(glm.radians(degrees), (0,1,0))
         changeInverse = glm.inverse(change)
 
-        self.Rotation = self.Rotation * change
+        self.RotationLocal = self.RotationLocal * change
         for pose in self._Keyframes:
             pose.Rotation = pose.Rotation * change
 
         for child in self._Children:
-            child.Position = changeInverse * child.Position
-            child.Rotation = changeInverse * child.Rotation
+            child.PositionLocal = changeInverse * child.PositionLocal
+            child.RotationLocal = changeInverse * child.RotationLocal
             for pose in child._Keyframes:
                 pose.Position = changeInverse * pose.Position
                 pose.Rotation = changeInverse * pose.Rotation

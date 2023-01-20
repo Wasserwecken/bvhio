@@ -59,13 +59,13 @@ def readAsBVH(path:str) -> BVH:
 
 def convertBvhToJoint(pose:RootPose) -> Joint:
     joint = Joint(pose.Name, pose.Offset, pose.getRotation())
-    joint.Keyframes = [Pose(f.Position, f.Rotation * joint.Rotation) for f in pose.Keyframes]
+    joint.Keyframes = [Pose(f.Position, f.Rotation * joint.RotationLocal) for f in pose.Keyframes]
 
     for child in pose.Children:
         child = convertBvhToJoint(child)
         for frame in child.Keyframes:
-            frame.Position = glm.inverse(joint.Rotation) * frame.Position
-            frame.Rotation = glm.inverse(joint.Rotation) * frame.Rotation
+            frame.Position = glm.inverse(joint.RotationLocal) * frame.Position
+            frame.Rotation = glm.inverse(joint.RotationLocal) * frame.Rotation
         joint.attach(child, keepPosition=False, keepRotation=False, keepScale=False)
     return joint
 
@@ -178,45 +178,3 @@ def deserializeMotion(joint:RootPose, data:numpy.ndarray, index = 0) -> int:
     for child in joint.Children:
         index = deserializeMotion(child, data, index)
     return index
-
-def write(path:str, bvh:BVH, percision:int = 9) -> None:
-    with open(path, "w") as file:
-        file.write('HIERARCHY\n')
-        writeHierarchy(file, bvh.Hierarchy, 0, True, percision)
-
-        file.write('MOTION\n')
-        file.write(f'Frames: {bvh.Frames}\n')
-        file.write(f'Frame Time: {bvh.FrameTime}\n')
-
-        for frame in range(bvh.Frames):
-            writeMotion(file, bvh.Hierarchy, frame, percision)
-            file.write('\n')
-
-def writeHierarchy(file:TextIOWrapper, joint:Joint, indent:int, isFirst:bool, percision:int) -> None:
-    offset = joint.Bone.Position
-    file.write(f'{" "*indent}{"ROOT" if isFirst else "JOINT"} {joint.Name}\n')
-    file.write(f'{" "*indent}{{\n')
-    file.write(f'{" "*(indent+1)}OFFSET {round(offset.x, percision)} {round(offset.y ,percision)} {round(offset.z, percision)}\n')
-    file.write(f'{" "*(indent+1)}CHANNELS {len(joint.Channels)} {" ".join(joint.Channels)}\n')
-    if len(joint.Children) > 0:
-        for child in joint.Children:
-            writeHierarchy(file, child, indent+1, False, percision)
-    else:
-        file.write(f'{" "*(indent+1)}End Site\n{" "*(indent+1)}{{\n{" "*(indent+2)}OFFSET 0.0 0.0 0.0\n{" "*(indent+1)}}}\n')
-    file.write(f'{" "*indent}}}\n')
-
-def writeMotion(file:TextIOWrapper, joint:Joint, frame:int, percision:int) -> None:
-    rotOrder = ''.join([rot[0] for rot in joint.Channels if rot[1:] == 'rotation'])
-    rotation = joint.getEuler(rotOrder, extrinsic=False)
-    position = joint.Keyframes[frame].Position
-
-    for channel in joint.Channels:
-        if 'Xposition' == channel: file.write(f'{round(position.x, percision)} '); continue
-        if 'Yposition' == channel: file.write(f'{round(position.y, percision)} '); continue
-        if 'Zposition' == channel: file.write(f'{round(position.z, percision)} '); continue
-        if 'Xrotation' == channel: file.write(f'{round(rotation.x, percision)} '); continue
-        if 'Yrotation' == channel: file.write(f'{round(rotation.y, percision)} '); continue
-        if 'Zrotation' == channel: file.write(f'{round(rotation.z, percision)} '); continue
-
-    for child in joint.Children:
-        writeMotion(file, child, frame, percision)
