@@ -119,6 +119,7 @@ class Joint(Transform):
         """Sets the transform position and rotation properties by the given keyframe.
 
         If recursive the children do also load their keyframe data."""
+        if frame < 0: frame += len(self.Keyframes)
         if frame < 0 or frame >= len(self._Keyframes):
             raise ValueError(f'Frame number "{frame}" for {self.Name} is out of range. ({len(self._Keyframes)} Keyframes)')
 
@@ -136,6 +137,7 @@ class Joint(Transform):
         """Sets the keyframe properties by the current transform local position and local rotation.
 
         If recursive the children do also update their keyframe data."""
+        if frame < 0: frame += len(self.Keyframes)
         if frame < 0 or frame > len(self._Keyframes):
             raise ValueError(f'Frame number "{frame}" for {self.Name} is out of range.')
 
