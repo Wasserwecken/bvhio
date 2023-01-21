@@ -1,91 +1,6 @@
 import glm
 from SpatialTransform import Transform
-
-class Pose:
-    """Data structure for holding pose data."""
-
-    @property
-    def Position(self) -> glm.vec3: return glm.vec3(self._Position)
-    @Position.setter
-    def Position(self, value:glm.vec3) -> None: self._Position = glm.vec3(value)
-
-    @property
-    def Rotation(self) -> glm.quat: return glm.quat(self._Rotation)
-    @Rotation.setter
-    def Rotation(self, value:glm.quat) -> None: self._Rotation = glm.quat(value)
-
-    @property
-    def Scale(self) -> glm.vec3: return glm.vec3(self._Scale)
-    @Scale.setter
-    def Scale(self, value:glm.vec3) -> None: self._Scale = glm.vec3(value)
-
-    def __init__(self, position:glm.vec3 = glm.vec3(), rotation:glm.quat = glm.quat(), scale:glm.vec3 = glm.vec3(1)) -> None:
-        self._Position = glm.vec3(position)
-        self._Rotation = glm.quat(rotation)
-        self._Scale = glm.vec3(scale)
-
-    def __repr__(self) -> str:
-        return (f"Pos: {self.Position}, Rot: {self.Rotation}, Scale: {self.Scale}")
-
-    def __str__(self) -> str:
-        return self.__repr__()
-
-class RootPose:
-    """Data structure for the bvh skeleton definition. Contains the attributes as in the BVH file.
-
-    Keyframes contain the motion data."""
-    Name:str
-    Offset:glm.vec3
-    EndSite:glm.vec3
-    Keyframes:list[Pose]
-    Channels:list[str]
-    Children:list["RootPose"]
-
-    def __init__(self, name:str, offset: glm.vec3 = glm.vec3()) -> None:
-        self.Name = name
-        self.Offset = offset
-        self.EndSite = glm.vec3(0,1,0)
-        self.Keyframes = []
-        self.Channels = []
-        self.Children = []
-
-    def __repr__(self) -> str:
-        return (f"{self.Name}")
-
-    def __str__(self) -> str:
-        return self.__repr__()
-
-    def getTip(self) -> glm.vec3:
-        """Calculates the tip of the defined bone.
-
-        The tip position is the average position of all children in local space without rotation.
-        If there is no child joint, the EndSite value will be returned."""
-        children = len(self.Children)
-        if children == 1: return self.Children[0].Offset
-        elif children > 1: return sum(child.Offset for child in self.Children) / children
-        else: return self.EndSite if glm.length(self.EndSite) > 0.001 else glm.vec3(0,1,0)
-
-    def getLength(self) -> float:
-        """Length of the bone which is based on the tip."""
-        return glm.length(self.getTip())
-
-    def getRotation(self) -> glm.quat:
-        """calculate the bone rotation based on the tip."""
-        # https://arrowinmyknee.com/2021/02/10/how-to-get-rotation-from-two-vectors/
-        dir = glm.normalize(self.getTip())
-        axis = glm.vec3(0, 1, 0)
-        dot = glm.dot(axis, dir)
-
-        if dot < -0.999: return glm.quat(0,0,0,1)
-        return glm.angleAxis(glm.acos(dot), glm.cross(axis, dir))
-
-    def layout(self, index:int = 0, depth:int = 0) -> list[tuple["RootPose", int, int]]:
-        """Returns the hierarchical layout of this joint and its children recursivly."""
-        result = [[self, index, depth]]
-        for child in self.Children:
-            result.extend(child.layout(result[-1][1] + 1, depth + 1))
-        return result
-
+from ..shared import Pose
 
 class Joint(Transform):
     """Transform data of a joint including its keyframes.
@@ -108,17 +23,17 @@ class Joint(Transform):
     @Keyframes.setter
     def Keyframes(self, value:list[Pose]) -> None: self._Keyframes = list(value)
 
-    def __init__(self, name:str, position:glm.vec3 = glm.vec3(), rotation:glm.quat = glm.quat(), scale:glm.vec3 = glm.vec3(1), keyframePlaceholders:int = 0) -> None:
+    def __init__(self, name:str, position:glm.vec3 = glm.vec3(), rotation:glm.quat = glm.quat(), scale:glm.vec3 = glm.vec3(1), emptyKeyframes:int = 0) -> None:
         super().__init__(name, position, rotation, scale)
         self._Parent:"Joint" = None
         self._Children:list["Joint"] = []
 
-        if keyframePlaceholders == 0:
+        if emptyKeyframes > 0:
+            self._Keyframes:list[Pose] = [Pose(self._PositionLocal, self.RotationLocal, self.ScaleLocal) for _ in range(emptyKeyframes)]
+            self.readPose(0)
+        else:
             self._Keyframes:list[Pose] = []
             self._CurrentFrame = -1
-        else:
-            self._Keyframes:list[Pose] = [Pose() for _ in range(keyframePlaceholders)]
-            self.readPose(0)
 
 
     def readPose(self, frame:int, recursive: bool = True) -> "Joint":
@@ -278,21 +193,3 @@ class Joint(Transform):
 
     def layout(self, index: int = 0, depth: int = 0) -> list[tuple["Joint", int, int]]:
         return super().layout(index, depth)
-
-
-class BVH:
-    """Container for the information of the bvh file.
-
-    Root is the recursive definition of the skeleton.
-
-    Frame time the frame time.
-
-    Frams are the count of keyframes of the motion."""
-    Root:RootPose
-    FrameTime:float
-    FrameCount:int
-
-    def __init__(self):
-        self.Root:RootPose = None
-        self.FrameTime:float = None
-        self.FrameCount:int = None

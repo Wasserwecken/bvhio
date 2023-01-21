@@ -2,9 +2,15 @@ import os
 import glm
 import numpy
 import errno
-from .bvh import *
+
 from io import TextIOWrapper
 from SpatialTransform import Euler
+
+from .bvh import *
+from .hierarchy import *
+from .shared import *
+
+# from shared.Pose import Pose
 
 def parseLine(file:TextIOWrapper, lineNumber:int) -> tuple[int, list[str], tuple[TextIOWrapper, int, int, str]]:
     lineNumber += 1
@@ -13,12 +19,12 @@ def parseLine(file:TextIOWrapper, lineNumber:int) -> tuple[int, list[str], tuple
     debugInfo = (file, lineNumber, len(line) - len(line.lstrip()) + len(tokens[0]), line)
     return (lineNumber, tokens, debugInfo)
 
-def readAsBVH(path:str) -> BVH:
+def readAsBVH(path:str) -> BvhContainer:
     """Reads .bvh file as simple structure."""
     if not os.path.exists(path):
         raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), path)
 
-    bvh = BVH()
+    bvh = BvhContainer()
     with open(path, "r") as file:
         # check for 'HIERARCHY' start
         line, tokens, debugInfo = parseLine(file, 0)

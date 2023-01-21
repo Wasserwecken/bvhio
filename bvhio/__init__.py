@@ -1,2 +1,4 @@
+from .shared import *
 from .bvh import *
-from .parser import read, readAsBVH, convertBvhToJoint
+from .hierarchy import *
+from .Parser import *
