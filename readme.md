@@ -1,24 +1,34 @@
-# bvhio
-Libary for reading [Biovision .bvh](https://research.cs.wisc.edu/graphics/Courses/cs-838-1999/Jeff/BVH.html) files and converting the data into a hierarchical spatial structure, as 3D apps would do it.
+> This is under active development and changes can appear at anypoint. Feel free to create issues. If other people start using this i will start creating tests and a branching strategy. This package is created for my master thesis and aims for integrety but not for performance.
 
-This package is created for my master thesis and aims about integrety but not performance. For the most of the calculations the package [PyGLM](https://github.com/Zuzu-Typ/PyGLM) is used.
+> Right now, this libary can only read .bvh files. But it is planned to also write .bvh in the future
+
+# bvhio
+Lightweight libary for reading [Biovision .bvh](https://research.cs.wisc.edu/graphics/Courses/cs-838-1999/Jeff/BVH.html) files and converting them into a hierarchical spatial structure like transforms in Unity or Unreal. The package [PyGLM](https://github.com/Zuzu-Typ/PyGLM) is used for the matrix, quaternion and vector calculations.
+
+This package provide data for each joint in local and world space and does supports modifing the hierarchy itself without losing the keyframe data. The package [spatial-transform] is used as base object for joints and provides the most properties and methods.
+
 ## Install
 ``` batch
 pip install bvhio
  ```
 
 ## Features
-- Deserialize BVH into hierarchical structure.
-- Converts BVH data into proper hierarchical transforms like 3D apps.
-- Keeps deserialized BVH data.
-- Transforms data is converted to work without base pose.
-- Allows reading joint properties in local and world space.
-- Space is defined as: Y+ is Up and right handed like openGL.
-- Transform logic uses the package [spatial-transform](https://github.com/Wasserwecken/spatial-transform)
-- Calculations are done with [PyGLM](https://github.com/Zuzu-Typ/PyGLM)
+- Deserialisation
+    - load .bvh either as simple bvh structure or
+    - load .bvh as transform hierarchy for full reading and modification capabilities
+- Hierarchical
+    - Read properties in local or world space directly
+    - Coordination space is right-handed and Y-Up, like [openGL and GLM](https://www.evl.uic.edu/ralph/508S98/coordinates.html)
+- Animation
+    - Supports modifing keyframe data, even recursivly
+    - Supports joint modifications, like changing the joint-roll
+    - Keyframes are stored in local space
+    - Keframes support Position, Rotation and Scale
 - Python
     - Every method is documented in code with docstrings
     - Every method has type hinting
+    - ([Fluent Interface](https://de.wikipedia.org/wiki/Fluent_Interface)) design
+
 
 ## Examples and code
 ### Read bvh structure
