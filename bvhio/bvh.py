@@ -208,48 +208,44 @@ class Joint(Transform):
 
         return self
 
-    def applyRotation(self, rotation:glm.quat = None, recursive:bool = False, includeLocal:bool = False) -> "Joint":
+    def applyRotation(self, rotation:glm.quat = None, recursive:bool = False) -> "Joint":
         # define rotational change
         change = glm.inverse(self.RotationLocal) if rotation is None else rotation
         changeInverse = glm.inverse(change)
 
         # apply to current data
-        super().applyRotation(rotation, recursive=False, includeLocal=includeLocal)
+        super().applyRotation(rotation, recursive=False)
 
         # apply to keyframes
         for pose in self._Keyframes:
             pose.Rotation = change * pose.Rotation
-            if includeLocal:
-                pose.Position = change * pose.Position
         for child in self._Children:
             for pose in child._Keyframes:
                 pose.Position = changeInverse * pose.Position
                 pose.Rotation = changeInverse * pose.Rotation
             if recursive:
-                child.applyRotation(rotation, recursive=True, includeLocal=False)
+                child.applyRotation(rotation, recursive=True)
 
         return self
 
-    def appyScale(self, scale:glm.vec3 = None, recursive:bool = False, includeLocal:bool = False) -> "Joint":
+    def appyScale(self, scale:glm.vec3 = None, recursive:bool = False) -> "Joint":
         # define change in scale
         changeFrame = glm.div(self.ScaleLocal, self._Keyframes[self._CurrentFrame].Scale)
         change = glm.div(1, self.ScaleLocal) if scale is None else scale
         changeInverse = glm.div(1, change)
 
         # apply to current data
-        super().appyScale(scale, recursive=False, includeLocal=includeLocal)
+        super().appyScale(scale, recursive=False)
 
         # apply to keyframes
         for pose in self._Keyframes:
             pose.Scale *= changeFrame * change
-            if includeLocal:
-                pose.Position *= changeInverse
         for child in self._Children:
             for pose in child._Keyframes:
                 pose.Position *= changeInverse
                 pose.Scale *= changeInverse
             if recursive:
-                child.appyScale(scale, recursive=True, includeLocal=False)
+                child.appyScale(scale, recursive=True)
 
         return self
 
