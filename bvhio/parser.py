@@ -14,7 +14,7 @@ def parseLine(file:TextIOWrapper, lineNumber:int) -> tuple[int, list[str], tuple
     return (lineNumber, tokens, debugInfo)
 
 def readAsBVH(path:str) -> BVH:
-    """Reads an .bvh file"""
+    """Reads .bvh file as simple structure."""
     if not os.path.exists(path):
         raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), path)
 
@@ -58,6 +58,7 @@ def readAsBVH(path:str) -> BVH:
         return bvh
 
 def convertBvhToJoint(pose:RootPose) -> Joint:
+    """Convers a simple bvh srtucture to a transform hierarchy."""
     joint = Joint(pose.Name, pose.Offset, pose.getRotation())
     joint.Keyframes = [Pose(f.Position, f.Rotation * joint.RotationLocal) for f in pose.Keyframes]
 
@@ -70,6 +71,7 @@ def convertBvhToJoint(pose:RootPose) -> Joint:
     return joint
 
 def read(path:str) -> Joint:
+    """Reads .bvh file as transform hierarchy."""
     return convertBvhToJoint(readAsBVH(path).Root).readPose(0, recursive=True)
 
 def parseJoint(file:TextIOWrapper, name:str, line:int = 0) -> RootPose:
