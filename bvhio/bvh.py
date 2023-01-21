@@ -108,12 +108,18 @@ class Joint(Transform):
     @Keyframes.setter
     def Keyframes(self, value:list[Pose]) -> None: self._Keyframes = list(value)
 
-    def __init__(self, name:str, position:glm.vec3 = glm.vec3(), rotation:glm.quat = glm.quat(), scale:glm.vec3 = glm.vec3(1)) -> None:
+    def __init__(self, name:str, position:glm.vec3 = glm.vec3(), rotation:glm.quat = glm.quat(), scale:glm.vec3 = glm.vec3(1), keyframePlaceholders:int = 0) -> None:
         super().__init__(name, position, rotation, scale)
-        self._Keyframes:list[Pose] = []
         self._Parent:"Joint" = None
         self._Children:list["Joint"] = []
-        self._CurrentFrame = -1
+
+        if keyframePlaceholders == 0:
+            self._Keyframes:list[Pose] = []
+            self._CurrentFrame = -1
+        else:
+            self._Keyframes:list[Pose] = [Pose() for _ in range(keyframePlaceholders)]
+            self.readPose(0)
+
 
     def readPose(self, frame:int, recursive: bool = True) -> "Joint":
         """Sets the transform position and rotation properties by the given keyframe.
@@ -154,7 +160,7 @@ class Joint(Transform):
                 child.writePose(frame)
         return self
 
-    def attach(self, *nodes: "Joint", keepPosition: bool = True, keepRotation: bool = True, keepScale: bool = True) -> "Joint":
+    def attach(self, *nodes: "Joint", keepPosition: bool = False, keepRotation: bool = False, keepScale: bool = False) -> "Joint":
         for node in nodes:
             # attach the joint
             super().attach(node, keepPosition=keepPosition, keepRotation=keepRotation, keepScale=keepScale)
@@ -166,7 +172,7 @@ class Joint(Transform):
                 if keepScale: pose.Scale = self.ScaleWorldInverse * pose.Scale
         return self
 
-    def detach(self, node: "Joint", keepPosition: bool = True, keepRotation: bool = True, keepScale: bool = True) -> "Joint":
+    def detach(self, node: "Joint", keepPosition: bool = False, keepRotation: bool = False, keepScale: bool = False) -> "Joint":
 
         # apply detach corrections to animation data
         for pose in node._Keyframes:
@@ -178,56 +184,72 @@ class Joint(Transform):
         return super().detach(node, keepPosition, keepRotation, keepScale)
 
 
-    def clearParent(self, keepPosition: bool = True, keepRotation: bool = True, keepScale: bool = True) -> "Joint":
+    def clearParent(self, keepPosition: bool = False, keepRotation: bool = False, keepScale: bool = False) -> "Joint":
         return super().clearParent(keepPosition, keepRotation, keepScale)
 
-    def clearChildren(self, keepPosition: bool = True, keepRotation: bool = True, keepScale: bool = True) -> "Joint":
+    def clearChildren(self, keepPosition: bool = False, keepRotation: bool = False, keepScale: bool = False) -> "Joint":
         return super().clearChildren(keepPosition, keepRotation, keepScale)
 
 
-    def applyPosition(self, position:glm.vec3 = glm.vec3()) -> "Joint":
-        change = self.Position + position
-        super().applyPosition(position)
+    def applyPosition(self, position:glm.vec3 = None, recursive:bool = False) -> "Joint":
+        # define positional change
+        change = -self.PositionLocal if position is None else position
+        changeInverse = glm.inverse(self.RotationLocal) * (glm.div(1, self.ScaleLocal) * -change)
 
+        # apply to current data
+        super().applyPosition(position, recursive=recursive)
+
+        # apply to keyframes
         for pose in self._Keyframes:
-            pose.Position = -change + pose.Rotation
+            pose.Position += change
         for child in self._Children:
             for pose in child._Keyframes:
-                pose.Position = change + pose.Position
+                pose.Position += changeInverse
 
         return self
 
-    def applyRotation(self, rotation:glm.quat = glm.quat(), recursive:bool = False, includeLocal:bool = False) -> "Joint":
-        change = rotation * self.RotationLocal
+    def applyRotation(self, rotation:glm.quat = None, recursive:bool = False, includeLocal:bool = False) -> "Joint":
+        # define rotational change
+        change = glm.inverse(self.RotationLocal) if rotation is None else rotation
+        changeInverse = glm.inverse(change)
+
+        # apply to current data
         super().applyRotation(rotation, recursive=False, includeLocal=includeLocal)
 
+        # apply to keyframes
         for pose in self._Keyframes:
-            pose.Rotation = glm.inverse(change) * pose.Rotation
+            pose.Rotation = change * pose.Rotation
             if includeLocal:
                 pose.Position = change * pose.Position
         for child in self._Children:
             for pose in child._Keyframes:
-                pose.Position = change * pose.Position
-                pose.Rotation = change * pose.Rotation
+                pose.Position = changeInverse * pose.Position
+                pose.Rotation = changeInverse * pose.Rotation
             if recursive:
-                child.applyRotation(recursive=True, includeLocal=False)
+                child.applyRotation(rotation, recursive=True, includeLocal=False)
 
         return self
 
-    def appyScale(self, scale:glm.vec3 = glm.vec3(1), recursive:bool = False, includeLocal:bool = False) -> "Joint":
-        change = self.ScaleLocal * scale
+    def appyScale(self, scale:glm.vec3 = None, recursive:bool = False, includeLocal:bool = False) -> "Joint":
+        # define change in scale
+        changeFrame = glm.div(self.ScaleLocal, self._Keyframes[self._CurrentFrame].Scale)
+        change = glm.div(1, self.ScaleLocal) if scale is None else scale
+        changeInverse = glm.div(1, change)
+
+        # apply to current data
         super().appyScale(scale, recursive=False, includeLocal=includeLocal)
 
+        # apply to keyframes
         for pose in self._Keyframes:
-            pose.Scale *= glm.div(scale, change)
+            pose.Scale *= changeFrame * change
             if includeLocal:
-                pose.Position *= change
+                pose.Position *= changeInverse
         for child in self._Children:
             for pose in child._Keyframes:
-                pose.Position *= change
-                pose.Scale *= change
+                pose.Position *= changeInverse
+                pose.Scale *= changeInverse
             if recursive:
-                child.appyScale(recursive=True, includeLocal=False)
+                child.appyScale(scale, recursive=True, includeLocal=False)
 
         return self
 
@@ -275,6 +297,6 @@ class BVH:
     FrameCount:int
 
     def __init__(self):
-        self.Hierarchy = None
-        self.FrameTime = None
-        self.FrameCount = None
+        self.Root:RootPose = None
+        self.FrameTime:float = None
+        self.FrameCount:int = None

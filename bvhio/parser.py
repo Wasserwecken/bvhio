@@ -70,7 +70,7 @@ def convertBvhToJoint(pose:RootPose) -> Joint:
     return joint
 
 def read(path:str) -> Joint:
-    return convertBvhToJoint(readAsBVH(path).Root)
+    return convertBvhToJoint(readAsBVH(path).Root).readPose(0, recursive=True)
 
 def parseJoint(file:TextIOWrapper, name:str, line:int = 0) -> RootPose:
     # check for open bracket
