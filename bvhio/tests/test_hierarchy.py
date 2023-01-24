@@ -140,29 +140,35 @@ class Methods(unittest.TestCase):
     def test_writePose(self):
         instance = bvhio.readAsHierarchy('bvhio/tests/example.bvh')
         for frame in range(len(instance.Keyframes)):
-            instance.PositionLocal = randomPosition()
-            instance.RotationLocal = randomRotation()
-            instance.ScaleLocal = randomScale()
-            instance.writePose(frame)
             for j, _, _ in instance.layout():
+                instance.PositionLocal = randomPosition()
+                instance.RotationLocal = randomRotation()
+                instance.ScaleLocal = randomScale()
+                instance.writePose(frame)
                 self.assertEquals(j.PositionLocal, j.Keyframes[frame].Position)
                 self.assertEquals(j.RotationLocal, j.Keyframes[frame].Rotation)
                 self.assertEquals(j.ScaleLocal, j.Keyframes[frame].Scale)
 
     def test_attach(self):
+        instance = bvhio.readAsHierarchy('bvhio/tests/example.bvh')
         self.assertTrue(True)
 
     def test_detach(self):
+        instance = bvhio.readAsHierarchy('bvhio/tests/example.bvh')
         self.assertTrue(True)
 
     def test_applyPosition(self):
+        instance = bvhio.readAsHierarchy('bvhio/tests/example.bvh')
         self.assertTrue(True)
 
     def test_applyRotation(self):
+        instance = bvhio.readAsHierarchy('bvhio/tests/example.bvh')
         self.assertTrue(True)
 
     def test_appyScale(self):
+        instance = bvhio.readAsHierarchy('bvhio/tests/example.bvh')
         self.assertTrue(True)
 
     def test_roll(self):
+        instance = bvhio.readAsHierarchy('bvhio/tests/example.bvh')
         self.assertTrue(True)

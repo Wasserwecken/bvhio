@@ -89,7 +89,6 @@ class Joint(Transform):
         return self
 
     def detach(self, node: "Joint", keepPosition: bool = False, keepRotation: bool = False, keepScale: bool = False, updateKeyframes: bool = True) -> "Joint":
-
         # apply detach corrections to animation data
         if updateKeyframes:
             for pose in node._Keyframes:
