@@ -42,7 +42,7 @@ import bvhio
 
 # reads the file into a deserialized structure.
 # this structure does not have any specials properties or methods for spatial calculations
-bvh = bvhio.readAsBVH('example.bvh')
+bvh = bvhio.readAsBvh('bvhio/tests/example.bvh')
 print(f'Root: {bvh.Root}')
 print(f'Frames: {bvh.FrameCount}')
 print(f'Frame time: {bvh.FrameTime}')
@@ -72,11 +72,11 @@ import bvhio
 
 # reads the file into a deserialized structure. And provides all the bvh data as hierarchical transforms
 # this structure allows for extensive read of properties and spaces and also supports modifications, inlcuding the keyframes
-hierarchy = bvhio.read('example.bvh')
+hierarchy = bvhio.readAsHierarchy('bvhio/tests/example.bvh')
 hierarchy.printTree()
 
-# print info
-print('\nPosition and Y-direction of each joint in world space')
+# print more info
+print('\nPosition and Y-direction of each joint in world space ')
 for joint, index, depth in hierarchy.layout():
     print(f'{joint.PositionWorld} {joint.UpWorld} {joint.Name}')
 
@@ -127,7 +127,7 @@ import bvhio
 
 # The 'Joint' object allows for reading and modifing animations.
 # Most of the functionality is based on the package 'spatial-transform'.
-hierarchy = bvhio.read('example.bvh')
+hierarchy = bvhio.readAsHierarchy('bvhio/tests/example.bvh')
 
 # joints from the hierarchy can be selected by their name
 joint = hierarchy.filter('Head')[0]
@@ -154,7 +154,7 @@ joint.appyScale()
 import bvhio
 
 # The package allows to make modifcation on the animation data very conviniently
-hierarchy = bvhio.read('example.bvh')
+hierarchy = bvhio.readAsHierarchy('bvhio/tests/example.bvh')
 
 # add a root bone to the hierarchy and set itself as 'hierarchy'
 hierarchy = bvhio.Joint('Root', (0,0,0), emptyKeyframes=len(hierarchy.Keyframes))\
@@ -210,7 +210,7 @@ for joint, index, depth in hierarchy.layout():
 ```python
 import bvhio
 
-hierarchy = bvhio.read('example.bvh')
+hierarchy = bvhio.readAsHierarchy('bvhio/tests/example.bvh')
 
 # Fluent API design allows you to do multiple actions in one line:
 # Add root, scale down, apply scale, select first child, remove the parent
