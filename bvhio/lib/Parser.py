@@ -12,14 +12,16 @@ from .shared import *
 
 # from shared.Pose import Pose
 
-def parseLine(file:TextIOWrapper, lineNumber:int) -> tuple[int, list[str], tuple[TextIOWrapper, int, int, str]]:
+
+def parseLine(file: TextIOWrapper, lineNumber: int) -> tuple[int, list[str], tuple[TextIOWrapper, int, int, str]]:
     lineNumber += 1
     line = file.readline()
     tokens = line.strip().split()
     debugInfo = (file, lineNumber, len(line) - len(line.lstrip()) + len(tokens[0]), line)
     return (lineNumber, tokens, debugInfo)
 
-def readAsBVH(path:str) -> BvhContainer:
+
+def readAsBVH(path: str) -> BvhContainer:
     """Reads .bvh file as simple structure."""
     if not os.path.exists(path):
         raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), path)
@@ -63,7 +65,8 @@ def readAsBVH(path:str) -> BvhContainer:
 
         return bvh
 
-def convertBvhToJoint(pose:RootPose) -> Joint:
+
+def convertBvhToJoint(pose: RootPose) -> Joint:
     """Convers a simple bvh srtucture to a transform hierarchy."""
     joint = Joint(pose.Name, pose.Offset, pose.getRotation())
     joint.Keyframes = [Pose(f.Position, f.Rotation * joint.RotationLocal) for f in pose.Keyframes]
@@ -76,11 +79,13 @@ def convertBvhToJoint(pose:RootPose) -> Joint:
         joint.attach(child, keepPosition=False, keepRotation=False, keepScale=False)
     return joint
 
-def read(path:str) -> Joint:
+
+def read(path: str) -> Joint:
     """Reads .bvh file as transform hierarchy."""
     return convertBvhToJoint(readAsBVH(path).Root).readPose(0, recursive=True)
 
-def parseJoint(file:TextIOWrapper, name:str, line:int = 0) -> RootPose:
+
+def parseJoint(file: TextIOWrapper, name: str, line: int = 0) -> RootPose:
     # check for open bracket
     line, tokens, debugInfo = parseLine(file, line)
     if tokens[0] != '{' or len(tokens) > 1:
@@ -92,7 +97,7 @@ def parseJoint(file:TextIOWrapper, name:str, line:int = 0) -> RootPose:
     joint.Channels = deserializeChannles(file, line)
 
     # check for definition end or child joints or end site info
-    while(True):
+    while (True):
         line, tokens, debugInfo = parseLine(file, line)
         if tokens[0] == 'JOINT':
             joint.Children.append(parseJoint(file, deserializeJointName(tokens, debugInfo), line))
@@ -106,12 +111,14 @@ def parseJoint(file:TextIOWrapper, name:str, line:int = 0) -> RootPose:
     # return deserialized joint root pose
     return joint
 
-def deserializeJointName(tokens:list[str], debugInfo:tuple[TextIOWrapper, int, int, str]) -> str:
+
+def deserializeJointName(tokens: list[str], debugInfo: tuple[TextIOWrapper, int, int, str]) -> str:
     if not isinstance(tokens, list) and len(tokens) != 2:
         raise SyntaxError('Joint header must be 2-dimensional tuple', debugInfo)
     return tokens[1]
 
-def deserializeOffset(file:TextIOWrapper, line:int) -> glm.vec3:
+
+def deserializeOffset(file: TextIOWrapper, line: int) -> glm.vec3:
     line, tokens, debugInfo = parseLine(file, line)
     if tokens[0] != 'OFFSET':
         raise SyntaxError('Expected OFFSET definition for joint', debugInfo)
@@ -122,7 +129,8 @@ def deserializeOffset(file:TextIOWrapper, line:int) -> glm.vec3:
     except ValueError:
         raise SyntaxError('Offset must be numerics only', debugInfo)
 
-def deserializeChannles(file:TextIOWrapper, line:int) -> list[str]:
+
+def deserializeChannles(file: TextIOWrapper, line: int) -> list[str]:
     line, tokens, debugInfo = parseLine(file, line)
     if tokens[0] != 'CHANNELS':
         raise SyntaxError('Expected CHANNELS definition for joint', debugInfo)
@@ -131,12 +139,13 @@ def deserializeChannles(file:TextIOWrapper, line:int) -> list[str]:
     try:
         channelCount = int(tokens[1])
     except ValueError:
-        raise SyntaxError(f'Channel count must be numerical', debugInfo)
+        raise SyntaxError('Channel count must be numerical', debugInfo)
     if channelCount != len(tokens[2:]):
-        raise SyntaxError(f'Channel count mismatch with labels', debugInfo)
+        raise SyntaxError('Channel count mismatch with labels', debugInfo)
     return tokens[2:]
 
-def deserializeEndSite(file:TextIOWrapper, line:int) -> glm.vec3:
+
+def deserializeEndSite(file: TextIOWrapper, line: int) -> glm.vec3:
     line, tokens, debugInfo = parseLine(file, line)
     if tokens[0] != '{':
         raise SyntaxError('End Site definition must start with an opening bracket', debugInfo)
@@ -146,7 +155,8 @@ def deserializeEndSite(file:TextIOWrapper, line:int) -> glm.vec3:
         raise SyntaxError('End Site definition must start with an opening bracket', debugInfo)
     return result
 
-def deserializeFrameTime(data:list, debugInfo:tuple) -> float:
+
+def deserializeFrameTime(data: list, debugInfo: tuple) -> float:
     if not isinstance(data, list) or len(data) != 1:
         raise SyntaxError('Frame time must be a 1-dimensional tuple', debugInfo)
     try:
@@ -154,7 +164,8 @@ def deserializeFrameTime(data:list, debugInfo:tuple) -> float:
     except ValueError:
         raise SyntaxError('Frame time be numerical', debugInfo)
 
-def deserializeFrameCount(data:list, debugInfo:tuple) -> float:
+
+def deserializeFrameCount(data: list, debugInfo: tuple) -> float:
     if not isinstance(data, list) or len(data) != 1:
         raise SyntaxError('Frame count must be a 1-dimensional tuple', debugInfo)
     try:
@@ -162,13 +173,15 @@ def deserializeFrameCount(data:list, debugInfo:tuple) -> float:
     except ValueError:
         raise SyntaxError('Frame time be numerical', debugInfo)
 
-def deserializeKeyframe(data:list, debugInfo:tuple) -> numpy.ndarray:
+
+def deserializeKeyframe(data: list, debugInfo: tuple) -> numpy.ndarray:
     try:
         return numpy.array(list(map(float, data)))
     except ValueError:
         raise SyntaxError('Keyframe must be numerics only', debugInfo)
 
-def deserializeMotion(joint:RootPose, data:numpy.ndarray, index = 0) -> int:
+
+def deserializeMotion(joint: RootPose, data: numpy.ndarray, index=0) -> int:
     position = glm.vec3(joint.Offset)
     rotation = glm.vec3(0)
     rotOrder = ''

@@ -2,6 +2,7 @@ import glm
 from SpatialTransform import Transform
 from ..shared import Pose
 
+
 class Joint(Transform):
     """Transform data of a joint including its keyframes.
 
@@ -21,22 +22,21 @@ class Joint(Transform):
     @property
     def Keyframes(self) -> list[Pose]: return self._Keyframes
     @Keyframes.setter
-    def Keyframes(self, value:list[Pose]) -> None: self._Keyframes = list(value)
+    def Keyframes(self, value: list[Pose]) -> None: self._Keyframes = list(value)
 
-    def __init__(self, name:str, position:glm.vec3 = glm.vec3(), rotation:glm.quat = glm.quat(), scale:glm.vec3 = glm.vec3(1), emptyKeyframes:int = 0) -> None:
+    def __init__(self, name: str, position: glm.vec3 = glm.vec3(), rotation: glm.quat = glm.quat(), scale: glm.vec3 = glm.vec3(1), emptyKeyframes: int = 0) -> None:
         super().__init__(name, position, rotation, scale)
-        self._Parent:"Joint" = None
-        self._Children:list["Joint"] = []
+        self._Parent: "Joint" = None
+        self._Children: list["Joint"] = []
 
         if emptyKeyframes > 0:
-            self._Keyframes:list[Pose] = [Pose(self._PositionLocal, self.RotationLocal, self.ScaleLocal) for _ in range(emptyKeyframes)]
+            self._Keyframes: list[Pose] = [Pose(self._PositionLocal, self.RotationLocal, self.ScaleLocal) for _ in range(emptyKeyframes)]
             self.readPose(0)
         else:
-            self._Keyframes:list[Pose] = []
+            self._Keyframes: list[Pose] = []
             self._CurrentFrame = -1
 
-
-    def readPose(self, frame:int, recursive: bool = True) -> "Joint":
+    def readPose(self, frame: int, recursive: bool = True) -> "Joint":
         """Sets the transform position and rotation properties by the given keyframe.
 
         If recursive the children do also load their keyframe data."""
@@ -54,7 +54,7 @@ class Joint(Transform):
                 child.readPose(frame, recursive)
         return self
 
-    def writePose(self, frame:int, recursive: bool = True) -> "Joint":
+    def writePose(self, frame: int, recursive: bool = True) -> "Joint":
         """Sets the keyframe properties by the current transform local position and local rotation.
 
         If recursive the children do also update their keyframe data."""
@@ -98,15 +98,13 @@ class Joint(Transform):
         # finally detatch the joint
         return super().detach(node, keepPosition, keepRotation, keepScale)
 
-
     def clearParent(self, keepPosition: bool = False, keepRotation: bool = False, keepScale: bool = False) -> "Joint":
         return super().clearParent(keepPosition, keepRotation, keepScale)
 
     def clearChildren(self, keepPosition: bool = False, keepRotation: bool = False, keepScale: bool = False) -> "Joint":
         return super().clearChildren(keepPosition, keepRotation, keepScale)
 
-
-    def applyPosition(self, position:glm.vec3 = None, recursive:bool = False) -> "Joint":
+    def applyPosition(self, position: glm.vec3 = None, recursive: bool = False) -> "Joint":
         # define positional change
         change = -self.PositionLocal if position is None else position
         changeInverse = glm.inverse(self.RotationLocal) * (glm.div(1, self.ScaleLocal) * -change)
@@ -123,7 +121,7 @@ class Joint(Transform):
 
         return self
 
-    def applyRotation(self, rotation:glm.quat = None, recursive:bool = False) -> "Joint":
+    def applyRotation(self, rotation: glm.quat = None, recursive: bool = False) -> "Joint":
         # define rotational change
         change = glm.inverse(self.RotationLocal) if rotation is None else rotation
         changeInverse = glm.inverse(change)
@@ -143,7 +141,7 @@ class Joint(Transform):
 
         return self
 
-    def appyScale(self, scale:glm.vec3 = None, recursive:bool = False) -> "Joint":
+    def appyScale(self, scale: glm.vec3 = None, recursive: bool = False) -> "Joint":
         # define change in scale
         changeFrame = glm.div(self.ScaleLocal, self._Keyframes[self._CurrentFrame].Scale)
         change = glm.div(1, self.ScaleLocal) if scale is None else scale
@@ -164,11 +162,11 @@ class Joint(Transform):
 
         return self
 
-    def roll(self, degrees:float, recursive:bool = False) -> "Joint":
+    def roll(self, degrees: float, recursive: bool = False) -> "Joint":
         """Rolls the joint along its local Y axis. Updates the children so there is no spatial change
 
         Returns itself"""
-        change = glm.angleAxis(glm.radians(degrees), (0,1,0))
+        change = glm.angleAxis(glm.radians(degrees), (0, 1, 0))
         changeInverse = glm.inverse(change)
 
         self.RotationLocal = self.RotationLocal * change
@@ -185,7 +183,7 @@ class Joint(Transform):
 
         return self
 
-    def filter(self, pattern:str, isEqual:bool = False, caseSensitive: bool = False) -> list["Joint"]:
+    def filter(self, pattern: str, isEqual: bool = False, caseSensitive: bool = False) -> list["Joint"]:
         return super().filter(pattern, isEqual, caseSensitive)
 
     def filterRegex(self, pattern: str) -> list["Joint"]:
