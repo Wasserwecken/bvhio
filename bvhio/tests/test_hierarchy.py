@@ -1,6 +1,7 @@
 import unittest
 import bvhio
 import glm
+from utils import *
 
 class Reading(unittest.TestCase):
     def setUp(self):
@@ -124,3 +125,44 @@ class Reading(unittest.TestCase):
     def test_ScalesWorld(self):
         for j, i, d in self.instance.layout():
             self.assertGreater(1e-04,  glm.length(j.ScaleWorld - self.jointsWorld[i][2]))
+
+
+class Methods(unittest.TestCase):
+    def test_readPose(self):
+        instance = bvhio.readAsHierarchy('bvhio/tests/example.bvh')
+        for frame in range(len(instance.Keyframes)):
+            instance.readPose(frame)
+            for j, _, _ in instance.layout():
+                self.assertEquals(j.PositionLocal, j.Keyframes[frame].Position)
+                self.assertEquals(j.RotationLocal, j.Keyframes[frame].Rotation)
+                self.assertEquals(j.ScaleLocal, j.Keyframes[frame].Scale)
+
+    def test_writePose(self):
+        instance = bvhio.readAsHierarchy('bvhio/tests/example.bvh')
+        for frame in range(len(instance.Keyframes)):
+            instance.PositionLocal = randomPosition()
+            instance.RotationLocal = randomRotation()
+            instance.ScaleLocal = randomScale()
+            instance.writePose(frame)
+            for j, _, _ in instance.layout():
+                self.assertEquals(j.PositionLocal, j.Keyframes[frame].Position)
+                self.assertEquals(j.RotationLocal, j.Keyframes[frame].Rotation)
+                self.assertEquals(j.ScaleLocal, j.Keyframes[frame].Scale)
+
+    def test_attach(self):
+        self.assertTrue(True)
+
+    def test_detach(self):
+        self.assertTrue(True)
+
+    def test_applyPosition(self):
+        self.assertTrue(True)
+
+    def test_applyRotation(self):
+        self.assertTrue(True)
+
+    def test_appyScale(self):
+        self.assertTrue(True)
+
+    def test_roll(self):
+        self.assertTrue(True)
