@@ -33,7 +33,7 @@ jobs:
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
       - name: Test with unittest
-        run: python -m unittest discover ./SpatialTransform/tests
+        run: python -m unittest discover ./bvhio/tests
 
       - name: Build package
         run: python -m build
