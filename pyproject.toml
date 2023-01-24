@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 dynamic = ["dependencies"]
 name = "bvhio"
-version = "1.1.6"
+version = "1.1.7"
 authors = [ { name="Wasserwecken", email="author@example.com" }, ]
 description = "Libary for reading Biovision .bvh files and converting the data into a hierarchical spatial structure, as 3D apps would do it."
 readme = "readme.md"
