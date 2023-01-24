@@ -100,4 +100,5 @@ class RootPose(unittest.TestCase):
         for j, i, d in self.instance.layout():
             for frame, pose in enumerate(j.Keyframes):
                 self.assertEqual(pose.Position, self.frames[i][frame][0])
+                self.assertEqual(pose.Scale, glm.vec3(1))
                 self.assertGreater(1e-05, glm.length(pose.Rotation - self.frames[i][frame][1]))
