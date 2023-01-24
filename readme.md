@@ -41,7 +41,8 @@ This libary is a side product of my master thesis, in order to extract convenien
 import bvhio
 
 # reads the file into a deserialized structure. And provides all the bvh data as hierarchical transforms
-# this structure allows for extensive read of properties and spaces and also supports modifications, inlcuding the keyframes
+# this structure allows for extensive read of properties and spaces and also supports modifications,
+# inlcuding the keyframes
 hierarchy = bvhio.readAsHierarchy('bvhio/tests/example.bvh')
 hierarchy.printTree()
 
@@ -136,7 +137,7 @@ joint = hierarchy.filter('Head')[0]
 joint.Keyframes         # list of local animation data
 joint.readPose(0)        # sets the transform data to a specific keyframe
 joint.writePose(0)       # writes the current transform data into a keyframe
-joint.roll(0)            # changes the rotation of a bone around its own axis without affcting the children-
+joint.roll(0)            # changes the rotation of a bone around its own axis without affcting the children
 
 # Some methods do also update the keyframes to no destroy the animation data
 # Please refer to the package 'spatial-transform' for their behaviour
@@ -166,7 +167,8 @@ for pose in hierarchy.Keyframes:
 
 # set and apply the scale so the positions represent roughly centimeters
 # the 'appyScale' method recalculates local positions so the scale is included in the positions
-# the 'appyScale' method does also update all keyframes data, so the scale will not be lost when another pose is read
+# the 'appyScale' method does also update all keyframes data,
+# so the scale will not be lost when another pose is read
 hierarchy.ScaleWorld = 2.3
 hierarchy.appyScale(recursive=True)
 
