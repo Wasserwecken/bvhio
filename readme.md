@@ -35,37 +35,7 @@ This libary is a side product of my master thesis, in order to extract convenien
     - ([Fluent Interface](https://de.wikipedia.org/wiki/Fluent_Interface)) design
 
 
-## Examples and code
-### Read bvh structure
-```python
-import bvhio
-
-# reads the file into a deserialized structure.
-# this structure does not have any specials properties or methods for spatial calculations
-bvh = bvhio.readAsBvh('bvhio/tests/example.bvh')
-print(f'Root: {bvh.Root}')
-print(f'Frames: {bvh.FrameCount}')
-print(f'Frame time: {bvh.FrameTime}')
-
-# properties of a joint in the bvh hierarchy
-bvh.Root.Name
-bvh.Root.Offset
-bvh.Root.Channels
-bvh.Root.EndSite
-bvh.Root.Keyframes
-bvh.Root.Children
-
-# calculated properties that depend on the hierarchy and file definition
-bvh.Root.getRotation()
-bvh.Root.getLength()
-bvh.Root.getTip()
-
-# --------------------------- OUTPUT ---------------------------
-# Root: Hips
-# Frames: 2
-# Frame time: 0.033333
-```
-
+## Examples
 ### Read bvh as transform hierarchy
 ```python
 import bvhio
@@ -119,6 +89,36 @@ for joint, index, depth in hierarchy.layout():
 # vec3(      -0.1955,            0,            0 ) vec3(            0,           -1,            0 ) RightUpLeg
 # vec3(      -0.1955,       0.8815,            0 ) vec3(            0,            1,            0 ) RightLowLeg
 # vec3(      -0.1955,       0.0245,            0 ) vec3(            0,           -1,            0 ) RightFoot
+```
+
+### Read bvh as simple structure
+```python
+import bvhio
+
+# reads the file into a deserialized structure.
+# this structure does not have any specials properties or methods for spatial calculations
+bvh = bvhio.readAsBvh('bvhio/tests/example.bvh')
+print(f'Root: {bvh.Root}')
+print(f'Frames: {bvh.FrameCount}')
+print(f'Frame time: {bvh.FrameTime}')
+
+# properties of a joint in the bvh hierarchy
+bvh.Root.Name
+bvh.Root.Offset
+bvh.Root.Channels
+bvh.Root.EndSite
+bvh.Root.Keyframes
+bvh.Root.Children
+
+# calculated properties that depend on the hierarchy and file definition
+bvh.Root.getRotation()
+bvh.Root.getLength()
+bvh.Root.getTip()
+
+# --------------------------- OUTPUT ---------------------------
+# Root: Hips
+# Frames: 2
+# Frame time: 0.033333
 ```
 
 ### bvhio joint properties and methods
