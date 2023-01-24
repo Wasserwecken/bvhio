@@ -1,7 +1,3 @@
-> This is under active development and changes can appear at anypoint. Feel free to create issues. If other people start using this i will start creating tests and a branching strategy. This package is created for my master thesis and aims for integrety but not for performance.
-
-> Right now, this libary can only read .bvh files. But it is planned to also write .bvh in the future
-
 # bvhio
 Lightweight libary for reading [Biovision .bvh](https://research.cs.wisc.edu/graphics/Courses/cs-838-1999/Jeff/BVH.html) files and converting them into a hierarchical spatial structure like transforms in Unity or Unreal. The package [PyGLM](https://github.com/Zuzu-Typ/PyGLM) is used for the matrix, quaternion and vector calculations.
 
@@ -11,6 +7,12 @@ This package provide data for each joint in local and world space and does suppo
 ``` batch
 pip install bvhio
  ```
+
+## Why and intention
+This libary is a side product of my master thesis, in order to extract conveniently local and world data features from a humanoid skeleton hierarchy. I could not find any libary that could do that, without bloat or the features I required for extraction or modification.
+
+ ## Notes
+ - Right now, this libary can only read .bvh files. But it will be able to write .bvh in the future
 
 ## Features
 - Deserialisation
