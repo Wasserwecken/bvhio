@@ -3,9 +3,9 @@
 ![Publish Main](https://github.com/Wasserwecken/bvhio/actions/workflows/publish_main.yml/badge.svg?branch=main)
 ![Publish Preview](https://github.com/Wasserwecken/bvhio/actions/workflows/publish_preview.yml/badge.svg?branch=preview)
 # bvhio
-Lightweight libary for reading [Biovision .bvh](https://research.cs.wisc.edu/graphics/Courses/cs-838-1999/Jeff/BVH.html) files and converting them into a hierarchical spatial structure like transforms in Unity or Unreal. The package [PyGLM](https://github.com/Zuzu-Typ/PyGLM) is used for the matrix, quaternion and vector calculations.
+Lightweight libary for reading [Biovision .bvh](https://research.cs.wisc.edu/graphics/Courses/cs-838-1999/Jeff/BVH.html) files and converting them into a hierarchical spatial structure like transforms in Unity or Unreal.
 
-This package provide data for each joint in local and world space and does supports modifing the hierarchy itself without losing the keyframe data. The package [spatial-transform] is used as base object for joints and provides the most properties and methods.
+Provide data for each joint in local and world space and does supports modifing the hierarchy itself without losing the keyframe data. The package [spatial-transform] is used as base object for joints and provides the most properties and methods.
 
 ## Install
 ``` batch
@@ -15,16 +15,15 @@ pip install bvhio
 ## Why and intention
 This libary is a side product of my master thesis, in order to extract conveniently local and world data features from a humanoid skeleton hierarchy. I could not find any libary that could do that, without bloat or the features I required for extraction or modification.
 
- ## Notes
- - Right now, this libary can only read .bvh files. But it will be able to write .bvh in the future
+## Notes
+- Right now, this libary can only read .bvh files. But it will be able to write .bvh in the future
+- The package [PyGLM](https://github.com/Zuzu-Typ/PyGLM) is used for matrix, quaternion and vector calculations.
+- Same coordination space as [openGL and GLM](https://www.evl.uic.edu/ralph/508S98/coordinates.html) is used. Which is: Right-Handed, - Y+ is up, Z- is forward and positive rotations are counter clockwise.
 
 ## Features
 - Deserialisation
     - load .bvh either as simple bvh structure or
     - load .bvh as transform hierarchy for full reading and modification capabilities
-- Hierarchical
-    - Read properties in local or world space directly
-    - Coordination space is right-handed and Y-Up, like [openGL and GLM](https://www.evl.uic.edu/ralph/508S98/coordinates.html)
 - Animation
     - Supports modifing keyframe data, even recursivly
     - Supports joint modifications, like changing the joint-roll
