@@ -204,9 +204,15 @@ class Joint(Transform):
 
             # apply detach corrections to animation data
             if updateKeyframes:
-                if keepPosition: node.RestPose.Position = self.SpaceWorld * node.RestPose.Position
-                if keepRotation: node.RestPose.Rotation = self.RotationWorld * node.RestPose.Rotation
-                if keepScale: node.RestPose.Scale = self.ScaleWorld * node.RestPose.Scale
+                if keepPosition:
+                    parentPoseSpaceWorld = (self.Parent.SpaceWorld if self.Parent else glm.mat4()) * self.RestPose.Space
+                    node.RestPose.Position = parentPoseSpaceWorld * node.RestPose.Position
+                if keepRotation:
+                    parentPoseRotationWorld = (self.Parent.SpaceWorld if self.Parent else glm.quat()) * self.RestPose.Rotation
+                    node.RestPose.Rotation = parentPoseRotationWorld * node.RestPose.Rotation
+                if keepScale:
+                    parentPoseScaleWorld = (self.Parent.SpaceWorld if self.Parent else glm.quat()) * self.RestPose.Scale
+                    node.RestPose.Scale = parentPoseScaleWorld * node.RestPose.Scale
 
             # finally detatch the joint
             super().detach(node, keepPosition, keepRotation, keepScale)
