@@ -112,6 +112,7 @@ class Joint(Transform):
         If the frame number is negative, it will look for the n-th frame from the end.
 
         If recursive, the children do also load their keyframe data."""
+        if len(self.Keyframes) == 0: return self
         if frame < 0: frame = max(0, self.KeyframeRange[1] + 1 - frame)
 
         pose = Pose()
