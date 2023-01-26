@@ -24,8 +24,18 @@ def randomDirection():
     return glm.normalize(result)
 
 def randomRotation():
-    return glm.normalize(glm.quatLookAtRH(randomDirection(), (0,1,0)))
+    return glm.normalize(glm.quatLookAt(randomDirection(), (0,1,0)))
 
 def randomScale():
     return (glm.vec3(random.random(), random.random(), random.random()) + 0.01) * \
          glm.vec3(-1 if random.random()<0.5 else 1, -1 if random.random()<0.5 else 1, -1 if random.random()<0.5 else 1)
+
+
+def deviationPosition(a:glm.vec3, b:glm.vec3):
+    return glm.length(a - b)
+
+def deviationQuaternion(a:glm.quat, b:glm.quat):
+    return sum([abs(d) for d in (a - b).to_list()])
+
+def deviationScale(a:glm.vec3, b:glm.vec3):
+    return glm.length(a - b)

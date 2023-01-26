@@ -66,23 +66,31 @@ def readAsBvh(path: str) -> BvhContainer:
         return bvh
 
 
-def convertBvhToHierarchy(pose: RootPose) -> Joint:
-    """Convers a simple bvh srtucture to a transform hierarchy."""
-    joint = Joint(pose.Name, pose.Offset, pose.getRotation())
-    joint.Keyframes = [Pose(f.Position, f.Rotation * joint.RotationLocal) for f in pose.Keyframes]
+def convertBvhToHierarchy(bvhPose: RootPose) -> Joint:
+    """Convers a simple bvh srtucture to a joint hierarchy."""
+    restPose = Pose(bvhPose.Offset, bvhPose.getRotation())
+    keyFrames = [(index, pose) for index, pose in enumerate(bvhPose.Keyframes)]
 
-    for child in pose.Children:
-        child = convertBvhToHierarchy(child)
-        for frame in child.Keyframes:
-            frame.Position = glm.inverse(joint.RotationLocal) * frame.Position
-            frame.Rotation = glm.inverse(joint.RotationLocal) * frame.Rotation
-        joint.attach(child, keepPosition=False, keepRotation=False, keepScale=False)
+    joint = Joint(bvhPose.Name, restPose=restPose, keyFrames=keyFrames)
+    for frame, pose in joint.Keyframes:
+        joint.PositionLocal = pose.Position
+        joint.RotationLocal = pose.Rotation
+        joint.ScaleLocal = pose.Scale
+        joint.writePose(frame, recursive=False)
+
+    for child in bvhPose.Children:
+        childJoint = convertBvhToHierarchy(child)
+        for frame, childPose in childJoint.Keyframes:
+            childPose.Rotation = joint.RestPose.Rotation * childPose.Rotation
+
+        joint.attach(childJoint, keepPosition=False, keepRotation=True, keepScale=False, updateRestPose=True)
+
     return joint
 
 
 def readAsHierarchy(path: str) -> Joint:
-    """Reads .bvh file as transform hierarchy."""
-    return convertBvhToHierarchy(readAsBvh(path).Root).readPose(0, recursive=True)
+    """Reads .bvh file as joint hierarchy."""
+    return convertBvhToHierarchy(readAsBvh(path).Root).readRestPose(recursive=True)
 
 
 def parseJoint(file: TextIOWrapper, name: str, line: int = 0) -> RootPose:
