@@ -90,7 +90,7 @@ class Joint(Transform):
         Returns itself."""
         # animation data
         if updateKeyframes:
-            for pose in self.Keyframes:
+            for frame, pose in self.Keyframes:
                 pose.Position += self.RestPose.Position - self.PositionLocal
                 pose.Rotation *= self.RestPose.Rotation * glm.inverse(self.RotationLocal)
                 pose.Scale *= (self.RestPose.Scale / self.ScaleLocal)
