@@ -7,24 +7,24 @@ class Reading(unittest.TestCase):
     def setUp(self):
         self.instance = bvhio.readAsHierarchy('bvhio/tests/example.bvh')
         self.joints = [ # for j, i, d in root.layout(): print(f"( {d}, {len(j.Children)}, {len(j.Keyframes)}, {j.KeyframeRange}, '{j.Name}', ),")
-            ( 0, 3, 2, [0, 1], 'Hips', ),
-            ( 1, 3, 2, [0, 1], 'Chest', ),
-            ( 2, 1, 2, [0, 1], 'Neck', ),
-            ( 3, 0, 2, [0, 1], 'Head', ),
-            ( 2, 1, 2, [0, 1], 'LeftCollar', ),
-            ( 3, 1, 2, [0, 1], 'LeftUpArm', ),
-            ( 4, 1, 2, [0, 1], 'LeftLowArm', ),
-            ( 5, 0, 2, [0, 1], 'LeftHand', ),
-            ( 2, 1, 2, [0, 1], 'RightCollar', ),
-            ( 3, 1, 2, [0, 1], 'RightUpArm', ),
-            ( 4, 1, 2, [0, 1], 'RightLowArm', ),
-            ( 5, 0, 2, [0, 1], 'RightHand', ),
-            ( 1, 1, 2, [0, 1], 'LeftUpLeg', ),
-            ( 2, 1, 2, [0, 1], 'LeftLowLeg', ),
-            ( 3, 0, 2, [0, 1], 'LeftFoot', ),
-            ( 1, 1, 2, [0, 1], 'RightUpLeg', ),
-            ( 2, 1, 2, [0, 1], 'RightLowLeg', ),
-            ( 3, 0, 2, [0, 1], 'RightFoot', ),
+            ( 0, 3, 2, (0, 1), 'Hips', ),
+            ( 1, 3, 2, (0, 1), 'Chest', ),
+            ( 2, 1, 2, (0, 1), 'Neck', ),
+            ( 3, 0, 2, (0, 1), 'Head', ),
+            ( 2, 1, 2, (0, 1), 'LeftCollar', ),
+            ( 3, 1, 2, (0, 1), 'LeftUpArm', ),
+            ( 4, 1, 2, (0, 1), 'LeftLowArm', ),
+            ( 5, 0, 2, (0, 1), 'LeftHand', ),
+            ( 2, 1, 2, (0, 1), 'RightCollar', ),
+            ( 3, 1, 2, (0, 1), 'RightUpArm', ),
+            ( 4, 1, 2, (0, 1), 'RightLowArm', ),
+            ( 5, 0, 2, (0, 1), 'RightHand', ),
+            ( 1, 1, 2, (0, 1), 'LeftUpLeg', ),
+            ( 2, 1, 2, (0, 1), 'LeftLowLeg', ),
+            ( 3, 0, 2, (0, 1), 'LeftFoot', ),
+            ( 1, 1, 2, (0, 1), 'RightUpLeg', ),
+            ( 2, 1, 2, (0, 1), 'RightLowLeg', ),
+            ( 3, 0, 2, (0, 1), 'RightFoot', ),
         ]
         self.restPoseLocal = [ # for j, i, d in root.layout(): print(f"( glm.{j.PositionLocal}, glm.{j.RotationLocal}, glm.{j.ScaleLocal}, ),")
             ( glm.vec3(            0,            0,            0 ), glm.quat(            1,            0,            0,            0 ), glm.vec3(            1,            1,            1 ), ),
@@ -128,7 +128,7 @@ class Reading(unittest.TestCase):
 
     def test_KeyframeRange(self):
         for j, i, d in self.instance.layout():
-            self.assertEqual([0, 1], self.joints[i][3])
+            self.assertEqual(j.getKeyframeRange(), self.joints[i][3])
 
     def test_PositionsRestPose(self):
         for j, i, d in self.instance.readRestPose(recursive=True).layout():

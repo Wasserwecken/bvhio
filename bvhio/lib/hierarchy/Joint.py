@@ -248,17 +248,15 @@ class Joint(Transform):
         recursion = recursive and (not updateRestPose)
         super().applyPosition(position, recursive=recursion, updateKeyframes=updateRestPose)
 
-        # apply to keyframes
+        # apply to restpose
         if updateRestPose:
-            for pose in self._Keyframes:
-                pose.Position += change
-            for child in self._Children:
-                for pose in child._Keyframes:
-                    pose.Position += changeInverse
+            self.RestPose.Position += change
+            for child in self.Children:
+                child.RestPose.Position += changeInverse
 
         # may do it recursivly
         if recursive:
-            for child in self._Children:
+            for child in self.Children:
                 child.applyPosition(position, recursive=True)
 
         return self
