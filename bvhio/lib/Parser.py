@@ -69,21 +69,26 @@ def readAsBvh(path: str) -> BvhContainer:
 def convertBvhToHierarchy(bvhPose: RootPose) -> Joint:
     """Convers a simple bvh srtucture to a joint hierarchy."""
     restPose = Pose(bvhPose.Offset, bvhPose.getRotation())
-    keyFrames = [(index, pose) for index, pose in enumerate(bvhPose.Keyframes)]
-
+    keyFrames = [(frame, key.copy()) for frame, key in enumerate(bvhPose.Keyframes)]
     joint = Joint(bvhPose.Name, restPose=restPose, keyFrames=keyFrames)
-    for frame, pose in joint.Keyframes:
-        joint.PositionLocal = pose.Position
-        joint.RotationLocal = pose.Rotation
-        joint.ScaleLocal = pose.Scale
-        joint.writePose(frame, recursive=False)
 
     for child in bvhPose.Children:
         childJoint = convertBvhToHierarchy(child)
-        for frame, childPose in childJoint.Keyframes:
-            childPose.Rotation = joint.RestPose.Rotation * childPose.Rotation
+        joint.attach(childJoint, keepPosition=False, keepRotation=False, keepScale=False, updateRestPose=False)
 
-        joint.attach(childJoint, keepPosition=False, keepRotation=True, keepScale=False, updateRestPose=True)
+        # bvh conversions
+        for frame, childPose in childJoint.Keyframes:
+            # calculate diff between offset and keyframe, the position is given rotationally independent.
+            childPose.Position = childPose.Position - childJoint.RestPose.Position
+            childPose.Position = glm.inverse(joint.RestPose.Rotation) * childPose.Position
+
+            # the rotation is already given as difference, but the multiplication order is switched.
+            childPose.Rotation = childPose.Rotation * childJoint.RestPose.Rotation
+            childPose.Rotation = (glm.inverse(childJoint.RestPose.Rotation) * childPose.Rotation)
+
+        # correct the rest pose, because its given in world space
+        childJoint.RestPose.Position = glm.inverse(joint.RestPose.Rotation) * childJoint.RestPose.Position
+        childJoint.RestPose.Rotation = glm.inverse(joint.RestPose.Rotation) * childJoint.RestPose.Rotation
 
     return joint
 
@@ -201,8 +206,11 @@ def deserializeMotion(joint: RootPose, data: numpy.ndarray, index=0) -> int:
         elif 'Xrotation' == channel: rotation.x = data[index]; rotOrder += 'X'
         elif 'Yrotation' == channel: rotation.y = data[index]; rotOrder += 'Y'
         elif 'Zrotation' == channel: rotation.z = data[index]; rotOrder += 'Z'
+        else: index -= 1
         index += 1
-    joint.Keyframes.append(Pose(position, Euler.toQuatFrom(glm.radians(rotation), rotOrder, False)))
+
+    rotation = Euler.toQuatFrom(glm.radians(rotation), order=rotOrder, extrinsic=False)
+    joint.Keyframes.append(Pose(position, rotation))
 
     for child in joint.Children:
         index = deserializeMotion(child, data, index)

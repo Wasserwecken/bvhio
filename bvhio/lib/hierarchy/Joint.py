@@ -47,7 +47,7 @@ class Joint(Transform):
 
     @RestPose.setter
     def RestPose(self, value: Pose) -> None:
-        self._RestPose = Pose(value.Position, value.Rotation, value.Scale)
+        self._RestPose = value.copy()
 
     def __init__(
             self, name: str = None,
@@ -115,7 +115,7 @@ class Joint(Transform):
         if len(self.Keyframes) == 0: return self
         if frame < 0: frame = max(0, self.KeyframeRange[1] + 1 - frame)
 
-        pose = Pose()
+        pose: Pose = None
         index = bisect.bisect_left([key[0] for key in self.Keyframes], frame)
         if index == len(self.Keyframes):
             pose = self.Keyframes[-1][1]
@@ -126,9 +126,11 @@ class Joint(Transform):
                 weight = (self.Keyframes[index][0] + frame) / self.Keyframes[index + 1][0]
                 before = self.Keyframes[index][1]
                 after = self.Keyframes[index + 1][1]
-                pose.Position = glm.lerp(before.Position, after.Position, weight)
-                pose.Rotation = glm.lerp(before.Rotation, after.Rotation, weight)
-                pose.Scale = glm.lerp(before.Scale, after.Scale, weight)
+                pose = Pose(
+                    glm.lerp(before.Position, after.Position, weight),
+                    glm.lerp(before.Rotation, after.Rotation, weight),
+                    glm.lerp(before.Scale, after.Scale, weight)
+                )
         else:
             pose = self.Keyframes[index][1]
 

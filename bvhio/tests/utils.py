@@ -32,10 +32,10 @@ def randomScale():
 
 
 def deviationPosition(a:glm.vec3, b:glm.vec3):
-    return glm.length(a - b)
+    return glm.l1Norm(a - b)
 
 def deviationQuaternion(a:glm.quat, b:glm.quat):
     return sum([abs(d) for d in (a - b).to_list()])
 
 def deviationScale(a:glm.vec3, b:glm.vec3):
-    return glm.length(a - b)
+    return glm.l1Norm(a - b)

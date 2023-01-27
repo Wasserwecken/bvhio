@@ -51,3 +51,6 @@ class Pose:
 
     def __str__(self) -> str:
         return self.__repr__()
+
+    def copy(self) -> "Pose":
+        return Pose(self.Position, self.Rotation, self.Scale)

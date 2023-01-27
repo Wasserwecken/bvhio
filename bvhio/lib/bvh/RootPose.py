@@ -51,8 +51,8 @@ class RootPose:
         axs = glm.vec3(0, 1, 0)
         dot = glm.dot(axs, dir)
 
-        if dot < -0.99999: return glm.quat(0, 0, 0, 1)
-        if dot > +0.99999: return glm.quat(1, 0, 0, 0)
+        if dot < -0.9999: return glm.quat(0, 0, 0, 1)
+        if dot > +0.9999: return glm.quat(1, 0, 0, 0)
         return glm.angleAxis(glm.acos(dot), glm.normalize(glm.cross(axs, dir)))
 
     def layout(self, index: int = 0, depth: int = 0) -> list[tuple["RootPose", int, int]]:
