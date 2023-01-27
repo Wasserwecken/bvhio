@@ -36,11 +36,6 @@ class Joint(Transform):
         self._Keyframes = list(value)
 
     @property
-    def KeyframeRange(self) -> tuple[int, int]:
-        frames = [key[0] for key in self.Keyframes]
-        return [frames[0], frames[-1]]
-
-    @property
     def RestPose(self) -> Pose:
         """Pose without any keyframe applied. The common T-Pose would go here."""
         return self._RestPose
@@ -113,7 +108,7 @@ class Joint(Transform):
 
         If recursive, the children do also load their keyframe data."""
         if len(self.Keyframes) == 0: return self
-        if frame < 0: frame = max(0, self.KeyframeRange[1] + 1 - frame)
+        if frame < 0: frame = max(0, self.getKeyframeRange(includeChildren=False)[1] + 1 - frame)
 
         pose: Pose = None
         index = bisect.bisect_left([key[0] for key in self.Keyframes], frame)
@@ -151,7 +146,7 @@ class Joint(Transform):
         If the frame number is negative, it will look for the n-th frame from the end.
 
         If recursive the children do also update their keyframe data."""
-        if frame < 0: frame = max(0, self.KeyframeRange[1] + 1 - frame)
+        if frame < 0: frame = max(0, self.getKeyframeRange(includeChildren=False)[1] + 1 - frame)
 
         index = bisect.bisect_left([key[0] for key in self.Keyframes], frame)
         if index == len(self.Keyframes) or self.Keyframes[index][0] != frame:
@@ -167,6 +162,20 @@ class Joint(Transform):
                 child.writePose(frame, recursive=True)
 
         return self
+
+    def getKeyframeRange(self, includeChildren: bool = False) -> tuple[int, int]:
+        """Time step range where keyframes appear. This does not match the keyframe index.
+
+        If includeChildren IS set, the range includes from this joint and all children the earliest and latest keyframe time."""
+        range = (self.Keyframes[0][0], self.Keyframes[-1][0])
+
+        if includeChildren:
+            for child in self.Children:
+                childRange = child.getKeyframeRange(includeChildren=True)
+                range[0] = min(range[0], childRange[0])
+                range[1] = max(range[1], childRange[1])
+
+        return range
 
     def attach(
             self,
