@@ -209,12 +209,12 @@ class Joint(Transform):
             keepPosition: bool = False,
             keepRotation: bool = False,
             keepScale: bool = False,
-            updateKeyframes: bool = True) -> "Joint":
+            updateRestPose: bool = True) -> "Joint":
         for node in nodes:
             if node.Parent is None or node.Parent != self: continue
 
             # apply detach corrections to animation data
-            if updateKeyframes:
+            if updateRestPose:
                 if keepPosition:
                     parentPoseSpaceWorld = (self.Parent.SpaceWorld if self.Parent else glm.mat4()) * self.RestPose.Space
                     node.RestPose.Position = parentPoseSpaceWorld * node.RestPose.Position
@@ -229,23 +229,27 @@ class Joint(Transform):
             super().detach(node, keepPosition, keepRotation, keepScale)
         return self
 
-    def clearParent(self, keepPosition: bool = False, keepRotation: bool = False, keepScale: bool = False, updateKeyframes: bool = True) -> "Joint":
-        return super().clearParent(keepPosition, keepRotation, keepScale, updateKeyframes)
+    def clearParent(self, keepPosition: bool = False, keepRotation: bool = False, keepScale: bool = False, updateRestPose: bool = True) -> "Joint":
+        if self.Parent is not None:
+            self.Parent.detach(self, keepPosition=keepPosition, keepRotation=keepRotation, keepScale=keepScale, updateRestPose=updateRestPose)
+        return self
 
-    def clearChildren(self, keepPosition: bool = False, keepRotation: bool = False, keepScale: bool = False, updateKeyframes: bool = True) -> "Joint":
-        return super().clearChildren(keepPosition, keepRotation, keepScale, updateKeyframes)
+    def clearChildren(self, keepPosition: bool = False, keepRotation: bool = False, keepScale: bool = False, updateRestPose: bool = True) -> "Joint":
+        if len(self.Children) > 0:
+            self.detach(*self.Children, keepPosition=keepPosition, keepRotation=keepRotation, keepScale=keepScale, updateRestPose=updateRestPose)
+        return self
 
-    def applyPosition(self, position: glm.vec3 = None, recursive: bool = False, updateKeyframes: bool = True) -> "Joint":
+    def applyPosition(self, position: glm.vec3 = None, recursive: bool = False, updateRestPose: bool = True) -> "Joint":
         # define positional change
         change = -self.PositionLocal if position is None else position
         changeInverse = glm.inverse(self.RotationLocal) * (glm.div(1, self.ScaleLocal) * -change)
 
         # apply to current data
-        recursion = recursive and (not updateKeyframes)
-        super().applyPosition(position, recursive=recursion, updateKeyframes=updateKeyframes)
+        recursion = recursive and (not updateRestPose)
+        super().applyPosition(position, recursive=recursion, updateKeyframes=updateRestPose)
 
         # apply to keyframes
-        if updateKeyframes:
+        if updateRestPose:
             for pose in self._Keyframes:
                 pose.Position += change
             for child in self._Children:
