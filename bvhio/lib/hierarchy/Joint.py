@@ -5,11 +5,6 @@ from ..shared import Pose
 
 
 class Joint(Transform):
-    """Transform data of a joint including its keyframes.
-
-    DataBVH holds the original bvh data of the hierarchy and motion.
-
-    Keyframes holding the converted motion data, where position and rotation are in local space, in cluding the bvh base pose"""
 
     @property
     def Parent(self) -> "Joint":
@@ -21,14 +16,14 @@ class Joint(Transform):
 
     @property
     def CurrentFrame(self) -> int:
-        """Frame index that has been read the latest."""
+        """Latest frame index that has been read with readPose()."""
         return self._CurrentFrame
 
     @property
     def Keyframes(self) -> list[tuple[int, Pose]]:
-        """Poses for the joint. A pose holds the change of local properties in relation to the rest pose.
+        """Animation data for the joint. A keyframe holds the change of local properties in relation to the rest pose, so that Pose = (RestPose + Keyframe).
 
-        The first element in the tuple is the frame id and the second element are the local pose properties."""
+        The first element in the tuple is the frame id and the second element are the local keyframe properties."""
         return self._Keyframes
 
     @Keyframes.setter
@@ -37,7 +32,7 @@ class Joint(Transform):
 
     @property
     def RestPose(self) -> Pose:
-        """Pose without any keyframe applied. The common T-Pose would go here."""
+        """Pose without any keyframe applied. The common T-Pose would go here. This Pose is the base for all animation data."""
         return self._RestPose
 
     @RestPose.setter
@@ -61,7 +56,9 @@ class Joint(Transform):
         self._CurrentFrame = -1
 
     def readRestPose(self, recursive: bool = True) -> "Joint":
-        """Sets the joint to its rest pose.
+        """Sets joint properties to the rest pose.
+
+        If recursive is True -> Child joints do also load their rest pose.
 
         Returns itself."""
         # self alignment
@@ -73,24 +70,24 @@ class Joint(Transform):
         if recursive:
             for child in self.Children:
                 child.readRestPose(recursive=True)
+
         return self
 
-    def writeRestPose(self, recursive: bool = True, updateKeyframes: bool = True) -> "Joint":
-        """Sets the rest pose to the current joint data.
+    def writeRestPose(self, recursive: bool = True, updateKeyframes: bool = False) -> "Joint":
+        """Sets the rest pose to the current joint properties.
 
-        If updateKeyframes is NOT set, the keyframes will be untouched.
-
-        If updateKeyframes IS set, the keyframes are updated to be spatially unchanged.
+        If updateKeyframes is True -> Keyframes are modified so that the animation
+        (NewRestPose + Keyframe) does not change.
 
         Returns itself."""
-        # animation data
+        # keyframe update
         if updateKeyframes:
             for frame, pose in self.Keyframes:
-                pose.Position += self.RestPose.Position - self.PositionLocal
-                pose.Rotation *= self.RestPose.Rotation * glm.inverse(self.RotationLocal)
-                pose.Scale *= (self.RestPose.Scale / self.ScaleLocal)
+                pose.Position = pose.Position + (self.RestPose.Position - self.PositionLocal)
+                pose.Rotation = pose.Rotation * (self.RestPose.Rotation * glm.inverse(self.RotationLocal))
+                pose.Scale = pose.Scale * (self.RestPose.Scale / self.ScaleLocal)
 
-        # self alignment
+        # write rest pose
         self.RestPose.Position = self.PositionLocal
         self.RestPose.Rotation = self.RotationLocal
         self.RestPose.Scale = self.ScaleLocal
@@ -99,14 +96,23 @@ class Joint(Transform):
         if recursive:
             for child in self.Children:
                 child.writeRestPose(recursive=True)
+
         return self
 
     def readPose(self, frame: int, recursive: bool = True) -> "Joint":
-        """Sets the transform position and rotation properties by the given keyframe and rest pose.
+        """Sets joint properties to the pose at the given frame id. The pose is defined by (RestPose + Keyframe).
 
         If the frame number is negative, it will look for the n-th frame from the end.
 
-        If recursive, the children do also load their keyframe data."""
+        If there are no keyframes, the joint propetries will not change.
+
+        If the frame id is out of the keyframe length, the nearest keyframe propetires are used.
+
+        If the frame id is between two keyframes, the pose properties are linearly interpolated.
+
+        If recursive is True -> Child joints do also load their pose.
+
+        Returns itself."""
         if len(self.Keyframes) == 0: return self
         if frame < 0: frame = max(0, self.getKeyframeRange(includeChildren=False)[1] + 1 - frame)
 
@@ -141,11 +147,15 @@ class Joint(Transform):
         return self
 
     def writePose(self, frame: int, recursive: bool = True) -> "Joint":
-        """Sets the keyframe properties by the current transform local position and local rotation.
+        """Sets joint properties as pose for the given frame id.
 
-        If the frame number is negative, it will look for the n-th frame from the end.
+        The keyframe data is calculated so that Pose = (RestPose + Keyframe).
 
-        If recursive the children do also update their keyframe data."""
+        If the frame number is negative, it counts as the n-th frame from the end.
+
+        If recursive is True -> Child joints do also write their pose.
+
+        Returns itself."""
         if frame < 0: frame = max(0, self.getKeyframeRange(includeChildren=False)[1] + 1 - frame)
 
         index = bisect.bisect_left([key[0] for key in self.Keyframes], frame)
@@ -164,9 +174,9 @@ class Joint(Transform):
         return self
 
     def getKeyframeRange(self, includeChildren: bool = False) -> tuple[int, int]:
-        """Time step range where keyframes appear. This does not match the keyframe index.
+        """Returns the earliest and latest frame id of the animation.
 
-        If includeChildren IS set, the range includes from this joint and all children the earliest and latest keyframe time."""
+        If includeChildren is True -> The range considers the earliest and latest frames from its children too."""
         range = (self.Keyframes[0][0], self.Keyframes[-1][0])
 
         if includeChildren:
@@ -229,6 +239,26 @@ class Joint(Transform):
             super().detach(node, keepPosition, keepRotation, keepScale)
         return self
 
+    def roll(self, degrees: float, recursive: bool = False) -> "Joint":
+        """Rotates the joint along its local Y axis and updates the children so there is no spatial change.
+
+        RestPose and Keyframe data are not modified. If you want to roll them consider to use -> joint.readPose().roll().writePose().
+
+        Returns itself.
+        """
+        change = glm.angleAxis(glm.radians(degrees), (0, 1, 0))
+        changeInverse = glm.inverse(change)
+
+        self.RotationLocal = self.RotationLocal * change
+        for child in self._Children:
+            child.PositionLocal = changeInverse * child.PositionLocal
+            child.RotationLocal = changeInverse * child.RotationLocal
+
+            if recursive:
+                child.roll(degrees, recursive=True)
+
+        return self
+
     def clearParent(self, keepPosition: bool = False, keepRotation: bool = False, keepScale: bool = False, updateRestPose: bool = True) -> "Joint":
         if self.Parent is not None:
             self.Parent.detach(self, keepPosition=keepPosition, keepRotation=keepRotation, keepScale=keepScale, updateRestPose=updateRestPose)
@@ -239,96 +269,14 @@ class Joint(Transform):
             self.detach(*self.Children, keepPosition=keepPosition, keepRotation=keepRotation, keepScale=keepScale, updateRestPose=updateRestPose)
         return self
 
-    def applyPosition(self, position: glm.vec3 = None, recursive: bool = False, updateRestPose: bool = True) -> "Joint":
-        # define positional change
-        change = -self.PositionLocal if position is None else position
-        changeInverse = glm.inverse(self.RotationLocal) * (glm.div(1, self.ScaleLocal) * -change)
+    def applyPosition(self, position: glm.vec3 = None, recursive: bool = False) -> "Joint":
+        return super().applyPosition(position, recursive)
 
-        # apply to current data
-        recursion = recursive and (not updateRestPose)
-        super().applyPosition(position, recursive=recursion, updateKeyframes=updateRestPose)
+    def applyRotation(self, rotation: glm.quat = None, recursive: bool = False) -> "Joint":
+        return super().applyRotation(rotation, recursive)
 
-        # apply to restpose
-        if updateRestPose:
-            self.RestPose.Position += change
-            for child in self.Children:
-                child.RestPose.Position += changeInverse
-
-        # may do it recursivly
-        if recursive:
-            for child in self.Children:
-                child.applyPosition(position, recursive=True)
-
-        return self
-
-    def applyRotation(self, rotation: glm.quat = None, recursive: bool = False, updateKeyframes: bool = True) -> "Joint":
-        # define rotational change
-        change = glm.inverse(self.RotationLocal) if rotation is None else rotation
-        changeInverse = glm.inverse(change)
-
-        # apply to current data
-        recursion = recursive and (not updateKeyframes)
-        super().applyRotation(rotation, recursive=recursion, updateKeyframes=updateKeyframes)
-
-        # apply to keyframes
-        if updateKeyframes:
-            for pose in self._Keyframes:
-                pose.Rotation = change * pose.Rotation
-            for child in self._Children:
-                for pose in child._Keyframes:
-                    pose.Position = changeInverse * pose.Position
-                    pose.Rotation = changeInverse * pose.Rotation
-                if recursive:
-                    child.applyRotation(rotation, recursive=True)
-
-        return self
-
-    def appyScale(self, scale: glm.vec3 = None, recursive: bool = False, updateKeyframes: bool = True) -> "Joint":
-        # define change in scale
-        changeFrame = glm.div(self.ScaleLocal, self._Keyframes[self._CurrentFrame].Scale)
-        change = glm.div(1, self.ScaleLocal) if scale is None else scale
-        changeInverse = glm.div(1, change)
-
-        # apply to current data
-        recursion = recursive and (not updateKeyframes)
-        super().appyScale(scale, recursive=recursion, updateKeyframes=updateKeyframes)
-
-        # apply to keyframes
-        if updateKeyframes:
-            for pose in self._Keyframes:
-                pose.Scale *= changeFrame * change
-            for child in self._Children:
-                for pose in child._Keyframes:
-                    pose.Position *= changeInverse
-                    pose.Scale *= changeInverse
-                if recursive:
-                    child.appyScale(scale, recursive=True)
-
-        return self
-
-    def roll(self, degrees: float, recursive: bool = False, updateKeyframes: bool = True) -> "Joint":
-        """Rolls the joint along its local Y axis. Updates the children so there is no spatial change
-
-        Returns itself"""
-        change = glm.angleAxis(glm.radians(degrees), (0, 1, 0))
-        changeInverse = glm.inverse(change)
-
-        self.RotationLocal = self.RotationLocal * change
-        if updateKeyframes:
-            for pose in self._Keyframes:
-                pose.Rotation = pose.Rotation * change
-
-        for child in self._Children:
-            child.PositionLocal = changeInverse * child.PositionLocal
-            child.RotationLocal = changeInverse * child.RotationLocal
-            if updateKeyframes:
-                for pose in child._Keyframes:
-                    pose.Position = changeInverse * pose.Position
-                    pose.Rotation = changeInverse * pose.Rotation
-            if recursive:
-                child.roll(degrees, recursive=True)
-
-        return self
+    def appyScale(self, scale: glm.vec3 = None, recursive: bool = False) -> "Joint":
+        return super().appyScale(scale, recursive)
 
     def filter(self, pattern: str, isEqual: bool = False, caseSensitive: bool = False) -> list["Joint"]:
         return super().filter(pattern, isEqual, caseSensitive)

@@ -2,10 +2,11 @@ import glm
 
 
 class Pose:
-    """Data structure for holding pose data."""
+    """Data structure for holding pose propeties"""
 
     @property
     def Space(self) -> glm.mat4:
+        """Transformation matrix for all properties"""
         if self.__isOutdated:
             self._Space = glm.translate(self.Position)
             self._Space = glm.scale(self._Space, self.Scale)
@@ -15,6 +16,7 @@ class Pose:
 
     @property
     def Position(self) -> glm.vec3:
+        """Postion of the pose"""
         return glm.vec3(self._Position)
 
     @Position.setter
@@ -24,6 +26,7 @@ class Pose:
 
     @property
     def Rotation(self) -> glm.quat:
+        """Rotation of the pose"""
         return glm.quat(self._Rotation)
 
     @Rotation.setter
@@ -33,6 +36,7 @@ class Pose:
 
     @property
     def Scale(self) -> glm.vec3:
+        """Scale of the pose"""
         return glm.vec3(self._Scale)
 
     @Scale.setter
@@ -41,6 +45,7 @@ class Pose:
         self.__isOutdated = True
 
     def __init__(self, position: glm.vec3 = glm.vec3(), rotation: glm.quat = glm.quat(), scale: glm.vec3 = glm.vec3(1)) -> None:
+        """Initialises a pose"""
         self._Position = glm.vec3(position)
         self._Rotation = glm.quat(rotation)
         self._Scale = glm.vec3(scale)
@@ -53,4 +58,5 @@ class Pose:
         return self.__repr__()
 
     def copy(self) -> "Pose":
+        """Returns a copy of this pose"""
         return Pose(self.Position, self.Rotation, self.Scale)
