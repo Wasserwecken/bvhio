@@ -189,26 +189,6 @@ class Methods(unittest.TestCase):
                 self.assertGreater(1e-06, deviationQuaternion(rotation, j.RotationLocal))
                 self.assertGreater(1e-06, deviationScale(scale, j.ScaleLocal))
 
-    def test_attach(self):
-        instance = bvhio.readAsHierarchy('bvhio/tests/example.bvh')
-        self.assertTrue(True)
-
-    def test_detach(self):
-        instance = bvhio.readAsHierarchy('bvhio/tests/example.bvh')
-        self.assertTrue(True)
-
-    def test_applyPosition(self):
-        instance = bvhio.readAsHierarchy('bvhio/tests/example.bvh')
-        self.assertTrue(True)
-
-    def test_applyRotation(self):
-        instance = bvhio.readAsHierarchy('bvhio/tests/example.bvh')
-        self.assertTrue(True)
-
-    def test_appyScale(self):
-        instance = bvhio.readAsHierarchy('bvhio/tests/example.bvh')
-        self.assertTrue(True)
-
     def test_roll(self):
         instance = bvhio.readAsHierarchy('bvhio/tests/example.bvh')
         self.assertTrue(True)

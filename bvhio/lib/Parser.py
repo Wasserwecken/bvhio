@@ -74,7 +74,7 @@ def convertBvhToHierarchy(bvhPose: RootPose) -> Joint:
 
     for child in bvhPose.Children:
         childJoint = convertBvhToHierarchy(child)
-        joint.attach(childJoint, keepPosition=False, keepRotation=False, keepScale=False, updateRestPose=False)
+        joint.attach(childJoint, keepPosition=False, keepRotation=False, keepScale=False)
 
         # bvh conversions
         for frame, childPose in childJoint.Keyframes:
