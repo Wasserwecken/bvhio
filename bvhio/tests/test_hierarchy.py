@@ -161,34 +161,78 @@ class Reading(unittest.TestCase):
             self.assertGreater(1e-06,  glm.length(j.ScaleWorld - self.pose0World[i][2]))
 
 class Methods(unittest.TestCase):
-    def test_readPose(self):
+    def test_write_read_RestPose(self):
         instance = bvhio.readAsHierarchy('bvhio/tests/example.bvh')
-        for frame in range(len(instance.Keyframes)):
-            instance.readPose(frame)
-            for j, _, _ in instance.layout():
-                self.assertGreater(1e-06, deviationPosition(j.PositionLocal, (j.RestPose.Position + j.Keyframes[frame][1].Position)))
-                self.assertGreater(1e-06, deviationQuaternion(j.RotationLocal, (j.RestPose.Rotation * j.Keyframes[frame][1].Rotation)))
-                self.assertGreater(1e-06, deviationScale(j.ScaleLocal, (j.RestPose.Scale * j.Keyframes[frame][1].Scale)))
+        instance.readRestPose(recursive=True)
+        restPose = [(joint.PositionWorld, joint.RotationWorld, joint.ScaleWorld) for joint, _ , _ in instance.layout()]
+        instance.readPose(0, recursive=True)
+        animPose = [(joint.PositionWorld, joint.RotationWorld, joint.ScaleWorld) for joint, _ , _ in instance.layout()]
 
-    def test_writePose(self):
+        instance.readRestPose(recursive=True)
+        instance.writeRestPose(recursive=True, updateKeyframes=False)
+        instance.readRestPose(recursive=True)
+        for j, i, d in instance.layout():
+            self.assertGreater(1e-04, deviationPosition(restPose[i][0], j.PositionWorld))
+            self.assertGreater(1e-04, deviationQuaternion(restPose[i][1], j.RotationWorld))
+            self.assertGreater(1e-04, deviationScale(restPose[i][2], j.ScaleWorld))
+        instance.readPose(0, recursive=True)
+        for j, i, d in instance.layout():
+            self.assertGreater(1e-04, deviationPosition(animPose[i][0], j.PositionWorld))
+            self.assertGreater(1e-04, deviationQuaternion(animPose[i][1], j.RotationWorld))
+            self.assertGreater(1e-04, deviationScale(animPose[i][2], j.ScaleWorld))
+
+        instance.readRestPose(recursive=True)
+        instance.writeRestPose(recursive=True, updateKeyframes=True)
+        instance.readRestPose(recursive=True)
+        for j, i, d in instance.layout():
+            self.assertGreater(1e-04, deviationPosition(restPose[i][0], j.PositionWorld))
+            self.assertGreater(1e-04, deviationQuaternion(restPose[i][1], j.RotationWorld))
+            self.assertGreater(1e-04, deviationScale(restPose[i][2], j.ScaleWorld))
+        instance.readPose(0, recursive=True)
+        for j, i, d in instance.layout():
+            self.assertGreater(1e-04, deviationPosition(animPose[i][0], j.PositionWorld))
+            self.assertGreater(1e-04, deviationQuaternion(animPose[i][1], j.RotationWorld))
+            self.assertGreater(1e-04, deviationScale(animPose[i][2], j.ScaleWorld))
+
+    def test_write_read_Pose(self):
         instance = bvhio.readAsHierarchy('bvhio/tests/example.bvh')
+        instance.readRestPose(recursive=True)
+        restPose = [(joint.PositionWorld, joint.RotationWorld, joint.ScaleWorld) for joint, _ , _ in instance.layout()]
+
         for frame in range(len(instance.Keyframes)):
-            for j, _, _ in instance.layout():
-                position = randomPosition()
-                rotation = randomRotation()
-                scale = randomScale()
-                j.PositionLocal = position
-                j.RotationLocal = rotation
-                j.ScaleLocal = scale
-                j.writePose(frame, recursive=False)
-                self.assertGreater(1e-06, deviationPosition(j.PositionLocal, (j.RestPose.Position + j.Keyframes[frame][1].Position)))
-                self.assertGreater(1e-06, deviationQuaternion(j.RotationLocal, (j.RestPose.Rotation * j.Keyframes[frame][1].Rotation)))
-                self.assertGreater(1e-06, deviationScale(j.ScaleLocal, (j.RestPose.Scale * j.Keyframes[frame][1].Scale)))
-                j.readPose(frame, recursive=False)
-                self.assertGreater(1e-06, deviationPosition(position, j.PositionLocal))
-                self.assertGreater(1e-06, deviationQuaternion(rotation, j.RotationLocal))
-                self.assertGreater(1e-06, deviationScale(scale, j.ScaleLocal))
+            instance.readPose(frame, recursive=True)
+            pose = [(joint.PositionWorld, joint.RotationWorld, joint.ScaleWorld) for joint, _ , _ in instance.layout()]
+
+            instance.writePose(frame, recursive=True, updateRestpose=False)
+            instance.readPose(frame, recursive=True)
+            for j, i, d in instance.layout():
+                self.assertGreater(1e-04, deviationPosition(pose[i][0], j.PositionWorld))
+                self.assertGreater(1e-04, deviationQuaternion(pose[i][1], j.RotationWorld))
+                self.assertGreater(1e-04, deviationScale(pose[i][2], j.ScaleWorld))
+            instance.readRestPose(recursive=True)
+            for j, i, d in instance.layout():
+                self.assertGreater(1e-04, deviationPosition(restPose[i][0], j.PositionWorld))
+                self.assertGreater(1e-04, deviationQuaternion(restPose[i][1], j.RotationWorld))
+                self.assertGreater(1e-04, deviationScale(restPose[i][2], j.ScaleWorld))
+
+            instance.readPose(frame, recursive=True)
+            instance.writePose(frame, recursive=True, updateRestpose=True)
+            instance.readPose(frame, recursive=True)
+            for j, i, d in instance.layout():
+                self.assertGreater(1e-04, deviationPosition(pose[i][0], j.PositionWorld))
+                self.assertGreater(1e-04, deviationQuaternion(pose[i][1], j.RotationWorld))
+                self.assertGreater(1e-04, deviationScale(pose[i][2], j.ScaleWorld))
 
     def test_roll(self):
         instance = bvhio.readAsHierarchy('bvhio/tests/example.bvh')
+        instance.readRestPose(recursive=True)
+        childPose = [(joint.PositionWorld, joint.RotationWorld, joint.ScaleWorld) for joint in instance.Children]
+
+        for step in range(72):
+            instance.roll(step*5, recursive=False)
+            for i, child in enumerate(instance.Children):
+                self.assertGreater(1e-04, deviationPosition(childPose[i][0], child.PositionWorld))
+                self.assertGreater(1e-04, deviationQuaternion(childPose[i][1], child.RotationWorld))
+                self.assertGreater(1e-04, deviationScale(childPose[i][2], child.ScaleWorld))
+
         self.assertTrue(True)
