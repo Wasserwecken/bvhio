@@ -26,7 +26,7 @@ class Reading(unittest.TestCase):
             ( 2, 1, 2, (0, 1), 'RightLowLeg', ),
             ( 3, 0, 2, (0, 1), 'RightFoot', ),
         ]
-        self.restPoseLocal = [ # for j, i, d in root.layout(): print(f"( glm.{j.PositionLocal}, glm.{j.RotationLocal}, glm.{j.ScaleLocal}, ),")
+        self.restPoseLocal = [ # for j, i, d in root.layout(): print(f"( glm.{j.Position}, glm.{j.Rotation}, glm.{j.Scale}, ),")
             ( glm.vec3(            0,            0,            0 ), glm.quat(            1,            0,            0,            0 ), glm.vec3(            1,            1,            1 ), ),
             ( glm.vec3(            0,         5.21,            0 ), glm.quat(     0.999333,    0.0365139,            0,            0 ), glm.vec3(            1,            1,            1 ), ),
             ( glm.vec3(            0,      18.6003,     -1.36106 ), glm.quat(     0.999333,   -0.0365139,            0,            0 ), glm.vec3(            1,            1,            1 ), ),
@@ -132,32 +132,32 @@ class Reading(unittest.TestCase):
 
     def test_PositionsRestPose(self):
         for j, i, d in self.instance.readRestPose(recursive=True).layout():
-            self.assertGreater(1e-04, deviationPosition(j.PositionLocal, self.restPoseLocal[i][0]))
+            self.assertGreater(1e-04, deviationPosition(j.Position, self.restPoseLocal[i][0]))
             self.assertGreater(1e-04, deviationPosition(j.PositionWorld, self.restPoseWorld[i][0]))
 
     def test_RotationsRestPose(self):
         for j, i, d in self.instance.readRestPose(recursive=True).layout():
-            self.assertGreater(1e-06, deviationQuaternion(j.RotationLocal, self.restPoseLocal[i][1]))
+            self.assertGreater(1e-06, deviationQuaternion(j.Rotation, self.restPoseLocal[i][1]))
             self.assertGreater(1e-06, deviationQuaternion(j.RotationWorld, self.restPoseWorld[i][1]))
 
     def test_ScalesRestPose(self):
         for j, i, d in self.instance.readRestPose(recursive=True).layout():
-            self.assertGreater(1e-06,  glm.length(j.ScaleLocal - self.restPoseLocal[i][2]))
+            self.assertGreater(1e-06,  glm.length(j.Scale - self.restPoseLocal[i][2]))
             self.assertGreater(1e-06,  glm.length(j.ScaleWorld - self.restPoseWorld[i][2]))
 
     def test_PositionsPose0(self):
         for j, i, d in self.instance.readPose(0, recursive=True).layout():
-            self.assertGreater(1e-04, deviationPosition(j.PositionLocal, self.pose0Local[i][0]))
+            self.assertGreater(1e-04, deviationPosition(j.Position, self.pose0Local[i][0]))
             self.assertGreater(1e-03, deviationPosition(j.PositionWorld, self.pose0World[i][0]))
 
     def test_RotationsPose0(self):
         for j, i, d in self.instance.readPose(0, recursive=True).layout():
-            self.assertGreater(1e-05, deviationQuaternion(j.RotationLocal, self.pose0Local[i][1]))
+            self.assertGreater(1e-05, deviationQuaternion(j.Rotation, self.pose0Local[i][1]))
             self.assertGreater(1e-05, deviationQuaternion(j.RotationWorld, self.pose0World[i][1]))
 
     def test_ScalesPose0(self):
         for j, i, d in self.instance.readPose(0, recursive=True).layout():
-            self.assertGreater(1e-06,  glm.length(j.ScaleLocal - self.pose0Local[i][2]))
+            self.assertGreater(1e-06,  glm.length(j.Scale - self.pose0Local[i][2]))
             self.assertGreater(1e-06,  glm.length(j.ScaleWorld - self.pose0World[i][2]))
 
 class Methods(unittest.TestCase):

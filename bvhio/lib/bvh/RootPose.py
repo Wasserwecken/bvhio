@@ -1,5 +1,5 @@
 import glm
-from ..shared import Pose
+from SpatialTransform import Pose
 
 
 class RootPose:

@@ -4,11 +4,10 @@ import numpy
 import errno
 
 from io import TextIOWrapper
-from SpatialTransform import Euler
+from SpatialTransform import Euler, Pose
 
 from .bvh import *
 from .hierarchy import *
-from .shared import *
 
 # from shared.Pose import Pose
 
@@ -69,12 +68,12 @@ def readAsBvh(path: str) -> BvhContainer:
 def convertBvhToHierarchy(bvhPose: RootPose) -> Joint:
     """Convers a deserialized bvh structure into a joint hierarchy."""
     restPose = Pose(bvhPose.Offset, bvhPose.getRotation())
-    keyFrames = [(frame, key.copy()) for frame, key in enumerate(bvhPose.Keyframes)]
+    keyFrames = [(frame, key.duplicate()) for frame, key in enumerate(bvhPose.Keyframes)]
     joint = Joint(bvhPose.Name, restPose=restPose, keyFrames=keyFrames)
 
     for child in bvhPose.Children:
         childJoint = convertBvhToHierarchy(child)
-        joint.attach(childJoint, keepPosition=False, keepRotation=False, keepScale=False)
+        joint.attach(childJoint, keep=None)
 
         # bvh conversions
         for frame, childPose in childJoint.Keyframes:

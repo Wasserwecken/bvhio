@@ -1,7 +1,6 @@
 import glm
 import bisect
-from SpatialTransform import Transform
-from ..shared import Pose
+from SpatialTransform import Transform, Pose
 
 
 class Joint(Transform):
@@ -44,7 +43,7 @@ class Joint(Transform):
 
     @RestPose.setter
     def RestPose(self, value: Pose) -> None:
-        self._RestPose = value.copy()
+        self._RestPose = value.duplicate()
 
     def __init__(
             self, name: str = None,
@@ -69,9 +68,9 @@ class Joint(Transform):
 
         Returns itself."""
         # self alignment
-        self.PositionLocal = self.RestPose.Position
-        self.RotationLocal = self.RestPose.Rotation
-        self.ScaleLocal = self.RestPose.Scale
+        self.Position = self.RestPose.Position
+        self.Rotation = self.RestPose.Rotation
+        self.Scale = self.RestPose.Scale
 
         # recursion
         if recursive:
@@ -90,14 +89,14 @@ class Joint(Transform):
         # remove change in rest pose from keyframes
         if updateKeyframes:
             for frame, key in self.Keyframes:
-                key.Position = key.Position + (self.RestPose.Position - self.PositionLocal)
-                key.Rotation = key.Rotation * (self.RestPose.Rotation * glm.inverse(self.RotationLocal))
-                key.Scale = key.Scale * (self.RestPose.Scale / self.ScaleLocal)
+                key.Position = key.Position + (self.RestPose.Position - self.Position)
+                key.Rotation = key.Rotation * (self.RestPose.Rotation * glm.inverse(self.Rotation))
+                key.Scale = key.Scale * (self.RestPose.Scale / self.Scale)
 
         # write rest pose
-        self.RestPose.Position = self.PositionLocal
-        self.RestPose.Rotation = self.RotationLocal
-        self.RestPose.Scale = self.ScaleLocal
+        self.RestPose.Position = self.Position
+        self.RestPose.Rotation = self.Rotation
+        self.RestPose.Scale = self.Scale
 
         # recursion
         if recursive:
@@ -116,16 +115,25 @@ class Joint(Transform):
         - If recursive is True -> Child joints do also load their pose.
 
         Returns itself."""
-        if len(self.Keyframes) == 0: return self
+        # may do it recursively
+        if recursive:
+            for child in self.Children:
+                child.readPose(frame, recursive=True)
+
+        # default to rest pose if there is no animation data
+        if len(self.Keyframes) == 0: return self.readRestPose(recursive=False)
         if frame < 0: frame = max(0, self.getKeyframeRange(includeChildren=False)[1] + 1 - frame)
 
+        # pose definition
         key: Pose = None
         index = bisect.bisect_left([key[0] for key in self.Keyframes], frame)
         if index == len(self.Keyframes):
-            key = self.Keyframes[-1][1]  # index is bigger than last frame, take last key
+            # index is bigger than last frame, take last key
+            key = self.Keyframes[-1][1]
         elif self.Keyframes[index][0] != frame:
             if index == 0:
-                key = self.Keyframes[-1][1]  # index is smaller than first frame, take first key
+                # index is smaller than first frame, take first key
+                key = self.Keyframes[-1][1]
             else:
                 # index is in between two keyframes, interpolate
                 weight = (self.Keyframes[index][0] + frame) / self.Keyframes[index + 1][0]
@@ -137,18 +145,14 @@ class Joint(Transform):
                     glm.lerp(before.Scale, after.Scale, weight)
                 )
         else:
-            key = self.Keyframes[index][1]  # index mathces a keyframe
+            # index mathces a keyframe
+            key = self.Keyframes[index][1]
 
         # calculate animation pose
         self._CurrentFrame = frame
-        self.PositionLocal = self.RestPose.Position + key.Position
-        self.RotationLocal = self.RestPose.Rotation * key.Rotation
-        self.ScaleLocal = self.RestPose.Scale * key.Scale
-
-        # may do it recursively
-        if recursive:
-            for child in self.Children:
-                child.readPose(frame, recursive=True)
+        self.Position = self.RestPose.Position + key.Position
+        self.Rotation = self.RestPose.Rotation * key.Rotation
+        self.Scale = self.RestPose.Scale * key.Scale
 
         return self
 
@@ -170,13 +174,13 @@ class Joint(Transform):
         key = self.Keyframes[index][1]
 
         if updateRestpose:
-            self.RestPose.Position = self.PositionLocal - key.Position
-            self.RestPose.Rotation = glm.inverse(key.Rotation) * self.RotationLocal
-            self.RestPose.Scale = self.ScaleLocal / key.Scale
+            self.RestPose.Position = self.Position - key.Position
+            self.RestPose.Rotation = glm.inverse(key.Rotation) * self.Rotation
+            self.RestPose.Scale = self.Scale / key.Scale
         else:
-            key.Position = self.PositionLocal - self.RestPose.Position
-            key.Rotation = glm.inverse(self.RestPose.Rotation) * self.RotationLocal
-            key.Scale = self.ScaleLocal / self.RestPose.Scale
+            key.Position = self.Position - self.RestPose.Position
+            key.Rotation = glm.inverse(self.RestPose.Rotation) * self.Rotation
+            key.Scale = self.Scale / self.RestPose.Scale
 
         if recursive:
             for child in self.Children:
@@ -210,27 +214,79 @@ class Joint(Transform):
         change = glm.angleAxis(glm.radians(degrees), (0, 1, 0))
         changeInverse = glm.inverse(change)
 
-        self.RotationLocal = self.RotationLocal * change
+        self.Rotation = self.Rotation * change
         for child in self._Children:
-            child.PositionLocal = changeInverse * child.PositionLocal
-            child.RotationLocal = changeInverse * child.RotationLocal
+            child.Position = changeInverse * child.Position
+            child.Rotation = changeInverse * child.Rotation
 
             if recursive:
                 child.roll(degrees, recursive=True)
 
         return self
 
-    def attach(self, *nodes: "Joint", keepPosition: bool = False, keepRotation: bool = False, keepScale: bool = False) -> "Joint":
-        return super().attach(*nodes, keepPosition=keepPosition, keepRotation=keepRotation, keepScale=keepScale)
+    def applyRestPoseRotationToKeyframes(self, rotation: glm.quat = None, recursive: bool = False) -> "Joint":
+        """Foo
 
-    def detach(self, *nodes: "Joint", keepPosition: bool = False, keepRotation: bool = False, keepScale: bool = False) -> "Joint":
-        return super().detach(*nodes, keepPosition=keepPosition, keepRotation=keepRotation, keepScale=keepScale)
+        Returns itself."""
+        # define rotational change
+        change = glm.inverse(self.RestPose.Rotation) if rotation is None else rotation
+        changeInverse = glm.inverse(change)
 
-    def clearParent(self, keepPosition: bool = False, keepRotation: bool = False, keepScale: bool = False) -> "Joint":
-        return super().clearParent(keepPosition, keepRotation, keepScale)
+        # apply changes to itself
+        self.RestPose.Rotation = self.RestPose.Rotation * change
 
-    def clearChildren(self, keepPosition: bool = False, keepRotation: bool = False, keepScale: bool = False) -> "Joint":
-        return super().clearChildren(keepPosition, keepRotation, keepScale)
+        # apply to keyframes
+        for frame, key in self.Keyframes:
+            key.Position = changeInverse * key.Position
+            key.Rotation = changeInverse * key.Rotation
+
+        # apply changes to children
+        for child in self.Children:
+            child.RestPose.Position = changeInverse * child.RestPose.Position
+            child.RestPose.Rotation = changeInverse * child.RestPose.Rotation
+
+            if recursive:
+                child.applyRestPoseRotationToKeyframes(rotation, recursive)
+
+        return self
+
+    def applyRestPoseScaleToKeyframes(self, scale: glm.vec3 = None, recursive: bool = False) -> "Joint":
+        """Foo
+
+        Returns itself."""
+        # define change in scale
+        change = (1.0 / self.RestPose.Scale) if scale is None else scale
+        changeInverse = (1.0 / change)
+
+        # apply changes to itself
+        self.RestPose.Scale *= change
+
+        # apply to keyframes
+        for frame, key in self.Keyframes:
+            key.Position = changeInverse * key.Position
+            key.Scale = changeInverse * key.Scale
+
+        # keep space for children
+        for child in self.Children:
+            child.RestPose.Position = changeInverse * child.RestPose.Position
+            child.RestPose.Scale = changeInverse * child.RestPose.Scale
+
+            if recursive:
+                child.applyRestPoseScaleToKeyframes(scale, recursive)
+
+        return self
+
+    def attach(self, *nodes: "Joint", keep: list[str] = ['position', 'rotation', 'scale']) -> "Joint":
+        return super().attach(*nodes, keep=keep)
+
+    def detach(self, *nodes: "Joint", keep: list[str] = ['position', 'rotation', 'scale']) -> "Joint":
+        return super().detach(*nodes, keep=keep)
+
+    def clearParent(self, keep: list[str] = ['position', 'rotation', 'scale']) -> "Joint":
+        return super().clearParent(keep=keep)
+
+    def clearChildren(self, keep: list[str] = ['position', 'rotation', 'scale']) -> "Joint":
+        return super().clearChildren(keep=keep)
 
     def applyPosition(self, position: glm.vec3 = None, recursive: bool = False) -> "Joint":
         return super().applyPosition(position, recursive)
