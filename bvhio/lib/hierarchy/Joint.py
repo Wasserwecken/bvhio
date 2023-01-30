@@ -110,7 +110,7 @@ class Joint(Transform):
         if index == len(self.Keyframes) or self.Keyframes[index][0] != frame:
             bisect.insort(self.Keyframes, (index, pose))
         else:
-            self.Keyframes[index][1] = pose
+            self.Keyframes[index] = (index, pose)
 
         return self
 

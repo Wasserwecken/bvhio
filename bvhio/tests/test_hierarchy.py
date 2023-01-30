@@ -203,7 +203,7 @@ class Methods(unittest.TestCase):
             instance.readPose(frame, recursive=True)
             pose = [(joint.PositionWorld, joint.RotationWorld, joint.ScaleWorld) for joint, _ , _ in instance.layout()]
 
-            instance.writePose(frame, recursive=True, updateRestpose=False)
+            instance.writePose(frame, recursive=True)
             instance.readPose(frame, recursive=True)
             for j, i, d in instance.layout():
                 self.assertGreater(1e-04, deviationPosition(pose[i][0], j.PositionWorld))
@@ -214,14 +214,6 @@ class Methods(unittest.TestCase):
                 self.assertGreater(1e-04, deviationPosition(restPose[i][0], j.PositionWorld))
                 self.assertGreater(1e-04, deviationQuaternion(restPose[i][1], j.RotationWorld))
                 self.assertGreater(1e-04, deviationScale(restPose[i][2], j.ScaleWorld))
-
-            instance.readPose(frame, recursive=True)
-            instance.writePose(frame, recursive=True, updateRestpose=True)
-            instance.readPose(frame, recursive=True)
-            for j, i, d in instance.layout():
-                self.assertGreater(1e-04, deviationPosition(pose[i][0], j.PositionWorld))
-                self.assertGreater(1e-04, deviationQuaternion(pose[i][1], j.RotationWorld))
-                self.assertGreater(1e-04, deviationScale(pose[i][2], j.ScaleWorld))
 
     def test_roll(self):
         instance = bvhio.readAsHierarchy('bvhio/tests/example.bvh')
