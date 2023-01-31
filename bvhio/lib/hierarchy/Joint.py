@@ -196,9 +196,9 @@ class Joint(Transform):
         # remove change in rest pose from keyframes
         if updateKeyframes:
             for frame, key in self.Keyframes:
-                key.Position = key.Position + (self.RestPose.Position - self.Position)
-                key.Rotation = key.Rotation * (self.RestPose.Rotation * glm.inverse(self.Rotation))
-                key.Scale = key.Scale * (self.RestPose.Scale / self.Scale)
+                key.Position = (self.SpaceInverse * self.RestPose.Space) * key.Position
+                key.Rotation = (self.RestPose.Rotation * glm.inverse(self.Rotation)) * key.Rotation
+                key.Scale = (self.RestPose.Scale / self.Scale) * key.Scale
 
         # write rest pose
         self.RestPose.Position = self.Position
@@ -208,7 +208,7 @@ class Joint(Transform):
         # recursion
         if recursive:
             for child in self.Children:
-                child.writeRestPose(recursive=True)
+                child.writeRestPose(recursive=True, updateKeyframes=updateKeyframes)
 
         return self
 
@@ -227,7 +227,7 @@ class Joint(Transform):
 
         # calculate animation pose
         self._CurrentFrame = frame
-        self.Position = self.RestPose.Position + key.Position
+        self.Position = self.RestPose.Space * key.Position
         self.Rotation = self.RestPose.Rotation * key.Rotation
         self.Scale = self.RestPose.Scale * key.Scale
 
@@ -249,7 +249,7 @@ class Joint(Transform):
         Returns itself."""
         # calculate difference to rest pose
         key = Pose(
-            position=self.Position - self.RestPose.Position,
+            position=self.RestPose.SpaceInverse * self.Position,
             rotation=glm.inverse(self.RestPose.Rotation) * self.Rotation,
             scale=self.Scale / self.RestPose.Scale
         )
@@ -283,7 +283,7 @@ class Joint(Transform):
     def roll(self, degrees: float, recursive: bool = False) -> "Joint":
         """Rotates the joint along its local Y axis and updates the children so there is no spatial change.
 
-        - RestPose and Keyframe data are not modified. If you want to roll them consider to use -> joint.readPose().roll().writePose().
+        - RestPose and Keyframe data are not modified.
 
         Returns itself.
         """
@@ -291,7 +291,7 @@ class Joint(Transform):
         changeInverse = glm.inverse(change)
 
         self.Rotation = self.Rotation * change
-        for child in self._Children:
+        for child in self.Children:
             child.Position = changeInverse * child.Position
             child.Rotation = changeInverse * child.Rotation
 
@@ -320,6 +320,9 @@ class Joint(Transform):
 
     def appyScale(self, scale: glm.vec3 = None, recursive: bool = False) -> "Joint":
         return super().appyScale(scale, recursive)
+
+    def setEuler(self, degrees: glm.vec3, order: str = 'ZXY', extrinsic: bool = True) -> "Joint":
+        return super().setEuler(degrees, order, extrinsic)
 
     def filter(self, pattern: str, isEqual: bool = False, caseSensitive: bool = False) -> list["Joint"]:
         return super().filter(pattern, isEqual, caseSensitive)

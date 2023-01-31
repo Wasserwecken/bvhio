@@ -67,27 +67,26 @@ def readAsBvh(path: str) -> BvhContainer:
 
 def convertBvhToHierarchy(bvhPose: RootPose) -> Joint:
     """Convers a deserialized bvh structure into a joint hierarchy."""
+    # copy data into a joint
     restPose = Pose(bvhPose.Offset, bvhPose.getRotation())
     keyFrames = [(frame, key.duplicate()) for frame, key in enumerate(bvhPose.Keyframes)]
     joint = Joint(bvhPose.Name, restPose=restPose, keyFrames=keyFrames)
 
+    # correct bvh keyframe data
+    for frame, key in joint.Keyframes:
+        # project offset into rest pose because it is given as overwrite and does not include the rest pose rotation.
+        key.Position = joint.RestPose.SpaceInverse * key.Position
+
+        # the rotation is already given as difference, but the multiplication order is switched.
+        key.Rotation = key.Rotation * joint.RestPose.Rotation
+        key.Rotation = (glm.inverse(joint.RestPose.Rotation) * key.Rotation)
+
     for child in bvhPose.Children:
+        # correct the rest pose, because its given without the parents rest pose rotation.
         childJoint = convertBvhToHierarchy(child)
-        joint.attach(childJoint, keep=None)
-
-        # bvh conversions
-        for frame, childPose in childJoint.Keyframes:
-            # calculate diff between offset and keyframe, the position is given rotationally independent.
-            childPose.Position = childPose.Position - childJoint.RestPose.Position
-            childPose.Position = glm.inverse(joint.RestPose.Rotation) * childPose.Position
-
-            # the rotation is already given as difference, but the multiplication order is switched.
-            childPose.Rotation = childPose.Rotation * childJoint.RestPose.Rotation
-            childPose.Rotation = (glm.inverse(childJoint.RestPose.Rotation) * childPose.Rotation)
-
-        # correct the rest pose, because its given in world space
         childJoint.RestPose.Position = glm.inverse(joint.RestPose.Rotation) * childJoint.RestPose.Position
         childJoint.RestPose.Rotation = glm.inverse(joint.RestPose.Rotation) * childJoint.RestPose.Rotation
+        joint.attach(childJoint, keep=None)
 
     return joint
 
