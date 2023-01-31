@@ -1,2 +1,2 @@
 from .BvhContainer import BvhContainer
-from .RootPose import RootPose
+from .BvhJoint import BvhJoint

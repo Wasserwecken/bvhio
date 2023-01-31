@@ -79,14 +79,14 @@ class Joint(Transform):
         index = bisect.bisect_left([key[0] for key in self.Keyframes], frame)
         if index == len(self.Keyframes):
             # index is bigger than last frame, take last key
-            return self.Keyframes[-1][1]
+            return self.Keyframes[-1][1].duplicate()
         elif self.Keyframes[index][0] == frame:
             # index matches a keyframe
-            return self.Keyframes[index][1]
+            return self.Keyframes[index][1].duplicate()
         else:
             if index == 0:
                 # index is smaller than first frame, take first key
-                return self.Keyframes[-1][1]
+                return self.Keyframes[-1][1].duplicate()
             else:
                 # index is in between two keyframes, interpolate
                 weight = (self.Keyframes[index][0] + frame) / self.Keyframes[index + 1][0]
@@ -223,7 +223,7 @@ class Joint(Transform):
 
         Returns itself."""
         # get animation data
-        key = self.getKeyframePose(frame=frame)
+        key = self.getKeyframePose(frame)
 
         # calculate animation pose
         self._CurrentFrame = frame
@@ -238,7 +238,7 @@ class Joint(Transform):
 
         return self
 
-    def writePose(self, frame: int, recursive: bool = True) -> "Joint":
+    def writePose(self, frameId: int, recursive: bool = True) -> "Joint":
         """Sets joint properties as animation pose for the given frame id.
 
         - If there is already a keyframe at the frame id, it will be overwritten.
@@ -248,19 +248,19 @@ class Joint(Transform):
 
         Returns itself."""
         # calculate difference to rest pose
-        key = Pose(
+        newKey = Pose(
             position=self.RestPose.SpaceInverse * self.Position,
             rotation=glm.inverse(self.RestPose.Rotation) * self.Rotation,
             scale=self.Scale / self.RestPose.Scale
         )
 
         # add keyframe
-        self.insertKeyframePose(frame=frame, pose=key)
+        self.insertKeyframePose(frameId, pose=newKey)
 
         # recursion
         if recursive:
             for child in self.Children:
-                child.writePose(frame, recursive=True)
+                child.writePose(frameId, recursive=True)
 
         return self
 

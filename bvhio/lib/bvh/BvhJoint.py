@@ -2,7 +2,7 @@ import glm
 from SpatialTransform import Pose
 
 
-class RootPose:
+class BvhJoint:
     """Data structure for the bvh skeleton definition. Contains the attributes as in the BVH file.
 
     Keyframes contain the motion data."""
@@ -11,7 +11,7 @@ class RootPose:
     EndSite: glm.vec3
     Keyframes: list[Pose]
     Channels: list[str]
-    Children: list["RootPose"]
+    Children: list["BvhJoint"]
 
     def __init__(self, name: str, offset: glm.vec3 = None) -> None:
         self.Name = name
@@ -55,7 +55,7 @@ class RootPose:
         if dot > +0.9999: return glm.quat(1, 0, 0, 0)
         return glm.angleAxis(glm.acos(dot), glm.normalize(glm.cross(axs, dir)))
 
-    def layout(self, index: int = 0, depth: int = 0) -> list[tuple["RootPose", int, int]]:
+    def layout(self, index: int = 0, depth: int = 0) -> list[tuple["BvhJoint", int, int]]:
         """Returns the hierarchical layout of this joint and its children recursivly."""
         result = [[self, index, depth]]
         for child in self.Children:

@@ -1,4 +1,4 @@
-from .RootPose import RootPose
+from .BvhJoint import BvhJoint
 
 
 class BvhContainer:
@@ -9,11 +9,11 @@ class BvhContainer:
     Frame time the frame time.
 
     Frams are the count of keyframes of the motion."""
-    Root: RootPose
-    FrameTime: float
+    Root: BvhJoint
     FrameCount: int
+    FrameTime: float
 
-    def __init__(self):
-        self.Root: RootPose = None
-        self.FrameTime: float = None
-        self.FrameCount: int = None
+    def __init__(self, root: BvhJoint = None, frameCount: int = None, frameTime: float = None):
+        self.Root: BvhJoint = root
+        self.FrameCount: int = frameCount
+        self.FrameTime: float = frameTime

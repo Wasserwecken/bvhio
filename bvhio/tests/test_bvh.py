@@ -13,7 +13,7 @@ class Container(unittest.TestCase):
     def test_FrameCount(self):
         self.assertEqual(self.instance.FrameCount, 2)
 
-class RootPose(unittest.TestCase):
+class BvhJoint(unittest.TestCase):
     def setUp(self):
         self.instance = bvhio.readAsBvh('bvhio/tests/example.bvh').Root
         self.joints = [ # for j, i, d in root.layout(): print(f"( {d}, glm.{j.Offset}, {j.Channels}, {len(j.Children)}, glm.{j.EndSite}, glm.{j.getTip()}, {j.getLength():09.6f}, glm.{j.getRotation()}, '{j .Name}', ),")

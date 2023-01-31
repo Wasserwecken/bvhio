@@ -65,12 +65,12 @@ def readAsBvh(path: str) -> BvhContainer:
         return bvh
 
 
-def convertBvhToHierarchy(bvhPose: RootPose) -> Joint:
-    """Convers a deserialized bvh structure into a joint hierarchy."""
+def convertBvhToHierarchy(bvh: BvhJoint) -> Joint:
+    """Converts a deserialized bvh structure into a joint hierarchy."""
     # copy data into a joint
-    restPose = Pose(bvhPose.Offset, bvhPose.getRotation())
-    keyFrames = [(frame, key.duplicate()) for frame, key in enumerate(bvhPose.Keyframes)]
-    joint = Joint(bvhPose.Name, restPose=restPose, keyFrames=keyFrames)
+    restPose = Pose(bvh.Offset, bvh.getRotation())
+    keyFrames = [(frame, key.duplicate()) for frame, key in enumerate(bvh.Keyframes)]
+    joint = Joint(bvh.Name, restPose=restPose, keyFrames=keyFrames)
 
     # correct bvh keyframe data
     for frame, key in joint.Keyframes:
@@ -81,7 +81,7 @@ def convertBvhToHierarchy(bvhPose: RootPose) -> Joint:
         key.Rotation = key.Rotation * joint.RestPose.Rotation
         key.Rotation = (glm.inverse(joint.RestPose.Rotation) * key.Rotation)
 
-    for child in bvhPose.Children:
+    for child in bvh.Children:
         # correct the rest pose, because its given without the parents rest pose rotation.
         childJoint = convertBvhToHierarchy(child)
         childJoint.RestPose.Position = glm.inverse(joint.RestPose.Rotation) * childJoint.RestPose.Position
@@ -91,19 +91,49 @@ def convertBvhToHierarchy(bvhPose: RootPose) -> Joint:
     return joint
 
 
+def convertHierarchyToBvh(joint: Joint, frames: int, worldSpace: Pose = Pose()) -> BvhJoint:
+    """Converts a joint structure into a deseralized bvh structure."""
+    bvh = BvhJoint(joint.Name)
+    bvh.Offset = worldSpace.Space * joint.RestPose.Position
+    bvh.EndSite = worldSpace.Space * (0, 1, 0)
+    bvh.Keyframes = [joint.getKeyframePose(frame) for frame in range(frames)]
+
+    worldSpace.Rotation = worldSpace.Rotation * joint.RestPose.Rotation
+    worldSpace.Scale = worldSpace.Scale * joint.RestPose.Scale
+
+    if 1e-02 < glm.l1Norm(sum([glm.abs(pose.Position) for pose in bvh.Keyframes])):
+        bvh.Channels.extend(['Xposition', 'Yposition', 'Zposition'])
+
+    if 1e-02 < (sum([sum([abs(d) for d in (pose.Rotation - glm.quat()).to_list()]) for pose in bvh.Keyframes])):
+        bvh.Channels.extend(['Zrotation', 'Xrotation', 'Yrotation'])
+
+    # convert data to bvh
+    for key in bvh.Keyframes:
+        key.Position = bvh.Offset + (worldSpace.Space * key.Position)
+        key.Rotation = worldSpace.Rotation * key.Rotation
+        key.Rotation = (key.Rotation * glm.inverse(worldSpace.Rotation))
+
+    # add children
+    for child in joint.Children:
+        childBvh = convertHierarchyToBvh(child, frames, worldSpace.duplicate())
+        bvh.Children.append(childBvh)
+
+    return bvh
+
+
 def readAsHierarchy(path: str) -> Joint:
     """Deserialize a .bvh file into a joint hierarchy."""
     return convertBvhToHierarchy(readAsBvh(path).Root).loadRestPose(recursive=True)
 
 
-def _parseJoint(file: TextIOWrapper, name: str, line: int = 0) -> RootPose:
+def _parseJoint(file: TextIOWrapper, name: str, line: int = 0) -> BvhJoint:
     # check for open bracket
     line, tokens, debugInfo = parseLine(file, line)
     if tokens[0] != '{' or len(tokens) > 1:
         raise SyntaxError('Joint definition must start with an opening bracket', debugInfo)
 
     # create joint and read channels and offeset
-    joint = RootPose(name)
+    joint = BvhJoint(name)
     joint.Offset = _deserializeOffset(file, line)
     joint.Channels = _deserializeChannles(file, line)
 
@@ -192,7 +222,7 @@ def _deserializeKeyframe(data: list, debugInfo: tuple) -> numpy.ndarray:
         raise SyntaxError('Keyframe must be numerics only', debugInfo)
 
 
-def _deserializeMotion(joint: RootPose, data: numpy.ndarray, index=0) -> int:
+def _deserializeMotion(joint: BvhJoint, data: numpy.ndarray, index=0) -> int:
     position = glm.vec3(joint.Offset)
     rotation = glm.vec3(0)
     rotOrder = ''
@@ -213,3 +243,66 @@ def _deserializeMotion(joint: RootPose, data: numpy.ndarray, index=0) -> int:
     for child in joint.Children:
         index = _deserializeMotion(child, data, index)
     return index
+
+
+def writeBvh(path: str, bvh: BvhContainer, percision: int = 9) -> None:
+    with open(path, "w") as file:
+        file.write('HIERARCHY\n')
+        writeJoint(file, bvh.Root, 0, True, percision)
+
+        file.write('MOTION\n')
+        file.write(f'Frames: {bvh.FrameCount}\n')
+        file.write(f'Frame Time: {bvh.FrameTime}\n')
+
+        for frame in range(bvh.FrameCount):
+            writeMotion(file, bvh.Root, frame, percision)
+            file.write('\n')
+
+
+def writeHierarchy(path: str, root: Joint, frameTime: float, frames: int = None, percision: int = 9) -> None:
+    frames = root.getKeyframeRange()[1] if frames is None else frames
+    container = BvhContainer(convertHierarchyToBvh(root, frames), frames, frameTime)
+    writeBvh(path, container, percision)
+
+
+def writeJoint(file: TextIOWrapper, joint: BvhJoint, indent: int, isFirst: bool, percision: int) -> None:
+    file.write(f'{"  "*indent}{"ROOT" if isFirst else "JOINT"} {joint.Name}\n')
+    file.write(f'{"  "*indent}{{\n')
+    file.write(f'{"  "*(indent+1)}OFFSET ')
+    file.write(f'{round(joint.Offset.x, percision)} ')
+    file.write(f'{round(joint.Offset.y, percision)} ')
+    file.write(f'{round(joint.Offset.z, percision)}\n')
+    file.write(f'{"  "*(indent+1)}CHANNELS {len(joint.Channels)} {" ".join(joint.Channels)}\n')
+    if len(joint.Children) > 0:
+        for child in joint.Children:
+            writeJoint(file, child, indent + 1, False, percision)
+    else:
+        file.write(f'{"  "*(indent+1)}End Site\n')
+        file.write(f'{"  "*(indent+1)}{{\n')
+        file.write(f'{"  "*(indent+2)}OFFSET ')
+        file.write(f'{round(joint.EndSite.x, percision)} ')
+        file.write(f'{round(joint.EndSite.y, percision)} ')
+        file.write(f'{round(joint.EndSite.z, percision)}\n')
+        file.write(f'{"  "*(indent+1)}}}\n')
+    file.write(f'{"  "*indent}}}\n')
+
+
+def writeMotion(file: TextIOWrapper, joint: BvhJoint, frame: int, percision: int) -> None:
+    rotOrder = ''.join([rot[0] for rot in joint.Channels if rot[1:] == 'rotation'])
+    if 'Z' not in rotOrder: rotOrder += 'Z'
+    if 'X' not in rotOrder: rotOrder += 'X'
+    if 'Y' not in rotOrder: rotOrder += 'Y'
+
+    rotation = joint.Keyframes[frame].getEuler(rotOrder, extrinsic=False)
+    position = joint.Keyframes[frame].Position
+
+    for channel in joint.Channels:
+        if 'Xposition' == channel: file.write(f'{round(position.x, percision)} '); continue
+        if 'Yposition' == channel: file.write(f'{round(position.y, percision)} '); continue
+        if 'Zposition' == channel: file.write(f'{round(position.z, percision)} '); continue
+        if 'Xrotation' == channel: file.write(f'{round(rotation.x, percision)} '); continue
+        if 'Yrotation' == channel: file.write(f'{round(rotation.y, percision)} '); continue
+        if 'Zrotation' == channel: file.write(f'{round(rotation.z, percision)} '); continue
+
+    for child in joint.Children:
+        writeMotion(file, child, frame, percision)
