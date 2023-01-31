@@ -94,7 +94,7 @@ def convertBvhToHierarchy(bvhPose: RootPose) -> Joint:
 
 def readAsHierarchy(path: str) -> Joint:
     """Deserialize a .bvh file into a joint hierarchy."""
-    return convertBvhToHierarchy(readAsBvh(path).Root).readRestPose(recursive=True)
+    return convertBvhToHierarchy(readAsBvh(path).Root).loadRestPose(recursive=True)
 
 
 def _parseJoint(file: TextIOWrapper, name: str, line: int = 0) -> RootPose:

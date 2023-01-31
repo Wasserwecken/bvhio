@@ -127,11 +127,11 @@ class Joint(Transform):
 
         if recursive:
             for child in self.Children:
-                child.readKeyframe(frame=frame, recursive=True)
+                child.removeKeyframe(frame=frame, recursive=True)
 
         return self
 
-    def readKeyframe(self, frame: int, recursive: bool = True) -> "Joint":
+    def loadKeyframe(self, frame: int, recursive: bool = True) -> "Joint":
         """Sets the joint properties to the pose data of the keyframe.
 
         - This is not the final animation data. The animation is calculated as ``Pose = Restpose + Keyframe``
@@ -145,12 +145,12 @@ class Joint(Transform):
 
         if recursive:
             for child in self.Children:
-                child.readKeyframe(frame=frame, recursive=True)
+                child.loadKeyframe(frame=frame, recursive=True)
 
         return self
 
     def writeKeyframe(self, frame: int, recursive: bool = True) -> "Joint":
-        """Takes the current local joint properties, and sets this as Keyframe pose.
+        """Takes the current local joint properties, and sets them as Keyframe data.
 
         - If recursive is True -> Child joints do also load their rest pose.
 
@@ -163,11 +163,11 @@ class Joint(Transform):
 
         if recursive:
             for child in self.Children:
-                child.readKeyframe(frame=frame, recursive=True)
+                child.writeKeyframe(frame=frame, recursive=True)
 
         return self
 
-    def readRestPose(self, recursive: bool = True) -> "Joint":
+    def loadRestPose(self, recursive: bool = True) -> "Joint":
         """Sets joint properties to the rest pose.
 
         - If recursive is True -> Child joints do also load their rest pose.
@@ -181,7 +181,7 @@ class Joint(Transform):
         # recursion
         if recursive:
             for child in self.Children:
-                child.readRestPose(recursive=True)
+                child.loadRestPose(recursive=True)
 
         return self
 
@@ -190,6 +190,7 @@ class Joint(Transform):
 
         - If updateKeyframes is False -> The keyframes do not change. The animation itself will change.
         - If updateKeyframes is True -> The keyframes are modified, so that the animation itself 'Pose = RestPose + Keyframe' does not change.
+        - If recursive is True -> Child joints do also load their rest pose.
 
         Returns itself."""
         # remove change in rest pose from keyframes
@@ -211,7 +212,7 @@ class Joint(Transform):
 
         return self
 
-    def readPose(self, frame: int, recursive: bool = True) -> "Joint":
+    def loadPose(self, frame: int, recursive: bool = True) -> "Joint":
         """Sets joint properties to the animation at the given frame id. The animation is defined as 'Pose = RestPose + Keyframe'.
 
         - If the frame number is negative, it will look for the n-th frame from the end.
@@ -221,15 +222,6 @@ class Joint(Transform):
         - If recursive is True -> Child joints do also load their pose.
 
         Returns itself."""
-        # may do it recursively
-        if recursive:
-            for child in self.Children:
-                child.readPose(frame, recursive=True)
-
-        # default to rest pose if there is no animation data
-        if len(self.Keyframes) == 0: return self.readRestPose(recursive=False)
-        if frame < 0: frame = max(0, self.getKeyframeRange(includeChildren=False)[1] + 1 - frame)
-
         # get animation data
         key = self.getKeyframePose(frame=frame)
 
@@ -239,22 +231,31 @@ class Joint(Transform):
         self.Rotation = self.RestPose.Rotation * key.Rotation
         self.Scale = self.RestPose.Scale * key.Scale
 
+        # may do it recursively
+        if recursive:
+            for child in self.Children:
+                child.loadPose(frame, recursive=True)
+
         return self
 
     def writePose(self, frame: int, recursive: bool = True) -> "Joint":
         """Sets joint properties as animation pose for the given frame id.
 
         - If there is already a keyframe at the frame id, it will be overwritten.
+        - Inserts a new keyframe if there is none yet.
         - If the frame number is negative, it counts as the n-th frame from the end.
         - If recursive is True -> Child joints do also write their pose.
 
         Returns itself."""
         # calculate difference to rest pose
-        self.insertKeyframePose(frame=frame, pose=Pose(
+        key = Pose(
             position=self.Position - self.RestPose.Position,
             rotation=glm.inverse(self.RestPose.Rotation) * self.Rotation,
             scale=self.Scale / self.RestPose.Scale
-        ))
+        )
+
+        # add keyframe
+        self.insertKeyframePose(frame=frame, pose=key)
 
         # recursion
         if recursive:
