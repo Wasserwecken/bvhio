@@ -260,8 +260,8 @@ def writeBvh(path: str, bvh: BvhContainer, percision: int = 9) -> None:
 
 
 def writeHierarchy(path: str, root: Joint, frameTime: float, frames: int = None, percision: int = 9) -> None:
-    frames = root.getKeyframeRange()[1] if frames is None else frames
-    container = BvhContainer(convertHierarchyToBvh(root, frames), frames, frameTime)
+    frames = (root.getKeyframeRange()[1] + 1) if frames is None else frames
+    container = BvhContainer(convertHierarchyToBvh(root, frames + 1), frames, frameTime)
     writeBvh(path, container, percision)
 
 

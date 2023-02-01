@@ -89,13 +89,13 @@ class Joint(Transform):
                 return self.Keyframes[-1][1].duplicate()
             else:
                 # index is in between two keyframes, interpolate
-                weight = (self.Keyframes[index][0] + frame) / self.Keyframes[index + 1][0]
-                before = self.Keyframes[index][1]
-                after = self.Keyframes[index + 1][1]
+                before = self.Keyframes[index - 1]
+                after = self.Keyframes[index]
+                weight = (before[0] + frame) / after[0]
                 return Pose(
-                    glm.lerp(before.Position, after.Position, weight),
-                    glm.lerp(before.Rotation, after.Rotation, weight),
-                    glm.lerp(before.Scale, after.Scale, weight)
+                    glm.lerp(before[1].Position, after[1].Position, weight),
+                    glm.lerp(before[1].Rotation, after[1].Rotation, weight),
+                    glm.lerp(before[1].Scale, after[1].Scale, weight)
                 )
 
     def insertKeyframePose(self, frame: int, pose: Pose) -> "Joint":
@@ -108,9 +108,9 @@ class Joint(Transform):
         index = bisect.bisect_left([key[0] for key in self.Keyframes], frame)
 
         if index == len(self.Keyframes) or self.Keyframes[index][0] != frame:
-            bisect.insort(self.Keyframes, (index, pose))
+            bisect.insort(self.Keyframes, (frame, pose))
         else:
-            self.Keyframes[index] = (index, pose)
+            self.Keyframes[index] = (frame, pose)
 
         return self
 
@@ -267,9 +267,12 @@ class Joint(Transform):
     def getKeyframeRange(self, includeChildren: bool = False) -> tuple[int, int]:
         """Returns the earliest and latest frame id of the animation.
 
+        - If there are no keyframes, `(-1, -1)` is returned.
         - If includeChildren is True -> The range considers the earliest and latest frames from its children too.
 
         The tuple layout is -> [FirstFrameId, LastFrameId]"""
+        if len(self.Keyframes) == 0: return (-1, -1)
+
         range = (self.Keyframes[0][0], self.Keyframes[-1][0])
 
         if includeChildren:
