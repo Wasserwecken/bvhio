@@ -1,7 +1,9 @@
-[![PyPI version](https://badge.fury.io/py/bvhio.svg)](https://badge.fury.io/py/bvhio)
+[![PyPI version](https://badge.fury.io/py/bvhio.svg)](https://pypi.python.org/pypi/bvhio/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-![Publish Main](https://github.com/Wasserwecken/bvhio/actions/workflows/publish_main.yml/badge.svg?branch=main)
-![Publish Preview](https://github.com/Wasserwecken/bvhio/actions/workflows/publish_preview.yml/badge.svg?branch=preview)
+[![Publish Main](https://github.com/Wasserwecken/bvhio/actions/workflows/publish_main.yml/badge.svg?branch=main)](https://github.com/Wasserwecken/bvhio/actions)
+[![Publish Preview](https://github.com/Wasserwecken/bvhio/actions/workflows/publish_preview.yml/badge.svg?branch=preview)](https://test.pypi.org/project/bvhio/)
+[![PyPI download month](https://img.shields.io/pypi/dm/bvhio.svg)](https://pypi.python.org/pypi/bvhio/)
+[![Generic badge](https://img.shields.io/badge/Ask_me-anything-turquoise.svg)](https://github.com/Wasserwecken/bvhio/issues)
 # bvhio
 Lightweight libary for reading, editing and creating [Biovision .bvh](https://research.cs.wisc.edu/graphics/Courses/cs-838-1999/Jeff/BVH.html) files. Deserializes files into a hierarchical spatial structure like transforms in Unity or Unreal.
 
