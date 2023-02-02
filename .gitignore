@@ -1,6 +1,6 @@
 .vscode/
 .VSCodeCounter/
 dist/
-__pycache__/
+**__pycache__/
 test.ipynb
 test.bvh
