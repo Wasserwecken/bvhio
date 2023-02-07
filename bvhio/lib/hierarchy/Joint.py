@@ -5,11 +5,9 @@ from SpatialTransform import Transform, Pose
 
 class Joint(Transform):
     """Spatial definition of an linear space with position, rotation and scale.
-
     - Bone alignment is expected to be along the Y+ axis.
     - Space is defined as right handed where Y+:up and X+:right and Z-:forward.
     - Positive rotations are counter clockwise.
-
     - The animation is a cualculation of ``Pose = RestPose + Keyframe``
     - The RestPose and Keyframe data is in local space only.
     - The method ``readPose()`` combines the RestPose and Keframes."""
@@ -30,7 +28,6 @@ class Joint(Transform):
     @property
     def Keyframes(self) -> list[tuple[int, Transform]]:
         """Animation data for the joint. A keyframe holds the change of local properties in relation to the rest pose, so that ``Pose = RestPose + Keyframe``.
-
     - The first element in the tuple is the frame id and the second element are the local keyframe properties.
     - This is an ordered list by the frame id.
     - Negative frame ids should not exist."""
@@ -69,7 +66,6 @@ class Joint(Transform):
 
     def getKeyframe(self, frame: int) -> Transform:
         """Returns the pose at the given frame id.
-
         - If the frame number is negative, it will look for the n-th frame from the end.
         - If there are no keyframes, the joint propetries will not change.
         - If the frame id is out of the keyframe length, the nearest keyframe propetires are used.
@@ -107,7 +103,6 @@ class Joint(Transform):
 
     def setKeyframe(self, frame: int, pose: Transform, keep: list[str] = ['position', 'rotation', 'scale']) -> "Joint":
         """Inserts the given pose to the the keyframes.
-
         - If there is already a keyframe at the frame id, it will be overwritten.
         - If the frame number is negative, it counts as the n-th frame from the end.
         - This pose is added later to the rest pose to calculate the final animation."""
@@ -132,9 +127,7 @@ class Joint(Transform):
 
     def removeKeyframe(self, frame: int, recursive: bool = False) -> "Joint":
         """Removes the keyframe, if it exists, from the keyframe list.
-
         - If recursive is True -> Child joints do also load their rest pose.
-
         Returns itself."""
         index = bisect.bisect_left([key[0] for key in self.Keyframes], frame)
 
@@ -149,9 +142,7 @@ class Joint(Transform):
 
     def loadRestPose(self, recursive: bool = True) -> "Joint":
         """Sets joint properties to the rest pose.
-
         - If recursive is True -> Child joints do also load their rest pose.
-
         Returns itself."""
         # self alignment
         self.Position = self.RestPose.Position
@@ -167,11 +158,9 @@ class Joint(Transform):
 
     def writeRestPose(self, recursive: bool = True, keep: list[str] = ['position', 'rotation', 'scale']) -> "Joint":
         """Sets the rest pose to the current joint properties.
-
         - If keep contains properties -> The Keyframes are modified to keep its spatial algiment in world space.
         - If keep is None or empty -> Keyframes do not change and thus the animation will change.
         - If recursive is True -> Child joints do also load their rest pose.
-
         Returns itself."""
         # remove change in rest pose from keyframes
         if keep:
@@ -194,13 +183,11 @@ class Joint(Transform):
 
     def loadPose(self, frame: int, recursive: bool = True) -> "Joint":
         """Sets joint properties to the animation at the given frame id. The animation is defined as 'Pose = RestPose + Keyframe'.
-
         - If the frame number is negative, it will look for the n-th frame from the end.
         - If there are no keyframes, the joint propetries will not change.
         - If the frame id is out of the keyframe length, the nearest keyframe propetires are used.
         - If the frame id is between two keyframes, pose properties are linearly interpolated.
         - If recursive is True -> Child joints do also load their pose.
-
         Returns itself."""
         # get animation data
         key = self.getKeyframe(frame)
@@ -220,12 +207,10 @@ class Joint(Transform):
 
     def writePose(self, frameId: int, recursive: bool = True) -> "Joint":
         """Sets joint properties as animation pose for the given frame id.
-
         - If there is already a keyframe at the frame id, it will be overwritten.
         - Inserts a new keyframe if there is none yet.
         - If the frame number is negative, it counts as the n-th frame from the end.
         - If recursive is True -> Child joints do also write their pose.
-
         Returns itself."""
         # add keyframe
         self.setKeyframe(frameId, pose=self, keep=['position', 'rotation', 'scale'])
@@ -239,10 +224,8 @@ class Joint(Transform):
 
     def getKeyframeRange(self, includeChildren: bool = True) -> tuple[int, int]:
         """Returns the earliest and latest frame id of the animation.
-
         - If there are no keyframes, `(0, 0)` is returned.
         - If includeChildren is True -> The range considers the earliest and latest frames from its children too.
-
         The tuple layout is -> [FirstFrameId, LastFrameId]"""
         if len(self.Keyframes) == 0: return (0, 0)
         range = (self.Keyframes[0][0], self.Keyframes[-1][0])
@@ -256,9 +239,7 @@ class Joint(Transform):
 
     def roll(self, degrees: float, recursive: bool = False) -> "Joint":
         """Rotates the joint along its local Y axis and updates the children so there is no spatial change.
-
         - RestPose and Keyframe data are not modified.
-
         Returns itself.
         """
         change = glm.angleAxis(glm.radians(degrees), (0, 1, 0))
@@ -291,13 +272,11 @@ class Joint(Transform):
 
     def applyRestposePosition(self, position: glm.vec3 = None, recursive: bool = False) -> "Joint":
         """"Resets the position of the Restpose to (0,0,0) or adds the given position.
-
         - This will load the restpose and overwrites the current pose of the transform!
         - You may want to call `loadPose` after this one or store the current properties.
         - Updates its keyframes position ONLY. Rotation and scale will be unchanged.
         - Updates its children Restposes positions to be spatially unchanged.
         - This does not update the childrens keyframes.
-
         Returns itself.
         """
         change, changeInverse = self.RestPose._applyPositionGetChanges(position)
@@ -316,11 +295,9 @@ class Joint(Transform):
 
     def applyRestposeRotation(self, rotation: glm.quat = None, recursive: bool = False, bake: bool = False, bakeKeyframes: bool = False) -> "Joint":
         """"Resets the rotation of the Restpose to (1,0,0,0) or adds the given rotation.
-
         - This does not update the childrens keyframes.
         - If bake is True -> The childrens Restposes will change in position ONLY.
         - If bakeKeyframes is True -> Updates its keyframes position ONLY.
-
         Returns itself.
         """
         change, changeInverse = self.RestPose._applyRotationGetChanges(rotation)
