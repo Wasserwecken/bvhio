@@ -4,12 +4,10 @@ import numpy
 import errno
 
 from io import TextIOWrapper
-from SpatialTransform import Euler, Pose
+from SpatialTransform import Euler, Pose, Transform
 
 from .bvh import *
 from .hierarchy import *
-
-# from shared.Pose import Pose
 
 
 def parseLine(file: TextIOWrapper, lineNumber: int) -> tuple[int, list[str], tuple[TextIOWrapper, int, int, str]]:
@@ -68,9 +66,10 @@ def readAsBvh(path: str) -> BvhContainer:
 def convertBvhToHierarchy(bvh: BvhJoint) -> Joint:
     """Converts a deserialized bvh structure into a joint hierarchy."""
     # copy data into a joint
-    restPose = Pose(bvh.Offset, bvh.getRotation())
-    keyFrames = [(frame, key.duplicate()) for frame, key in enumerate(bvh.Keyframes)]
-    joint = Joint(bvh.Name, restPose=restPose, keyFrames=keyFrames)
+    restPose = Transform(name='RestPose', position=bvh.Offset, rotation=bvh.getRotation())
+    joint = Joint(bvh.Name, restPose=restPose)
+    for frame, key in enumerate(bvh.Keyframes):
+        joint.setKeyframe(frame, Transform.fromPose(key), keep=None)
 
     # correct bvh keyframe data
     for frame, key in joint.Keyframes:
@@ -95,8 +94,8 @@ def convertHierarchyToBvh(joint: Joint, frames: int, worldSpace: Pose = Pose()) 
     """Converts a joint structure into a deseralized bvh structure."""
     bvh = BvhJoint(joint.Name)
     bvh.Offset = worldSpace.Space * joint.RestPose.Position
-    bvh.EndSite = worldSpace.Space * (0, 1, 0)
-    bvh.Keyframes = [joint.getKeyframePose(frame) for frame in range(frames)]
+    bvh.EndSite = (worldSpace.Space * (0, 1, 0)) * glm.length(joint.RestPose.Position) * 0.3
+    bvh.Keyframes = [joint.getKeyframe(frame).toPose(worldSpace=False) for frame in range(frames)]
 
     worldSpace.Rotation = worldSpace.Rotation * joint.RestPose.Rotation
     worldSpace.Scale = worldSpace.Scale * joint.RestPose.Scale
