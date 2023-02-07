@@ -185,20 +185,20 @@ class Joint(Transform):
 
         return self
 
-    def writeRestPose(self, recursive: bool = True, updateKeyframes: bool = False) -> "Joint":
+    def writeRestPose(self, recursive: bool = True, keep: list[str] = ['position', 'rotation', 'scale']) -> "Joint":
         """Sets the rest pose to the current joint properties.
 
-        - If updateKeyframes is False -> The keyframes do not change. The animation itself will change.
-        - If updateKeyframes is True -> The keyframes are modified, so that the animation itself 'Pose = RestPose + Keyframe' does not change.
+        - If keep contains properties -> The Keyframes are modified to keep its spatial algiment in world space.
+        - If keep is None or empty -> Keyframes do not change and thus the animation will change.
         - If recursive is True -> Child joints do also load their rest pose.
 
         Returns itself."""
         # remove change in rest pose from keyframes
-        if updateKeyframes:
+        if keep:
             for frame, key in self.Keyframes:
-                key.Position = (self.SpaceInverse * self.RestPose.Space) * key.Position
-                key.Rotation = (self.RestPose.Rotation * glm.inverse(self.Rotation)) * key.Rotation
-                key.Scale = (self.RestPose.Scale / self.Scale) * key.Scale
+                if 'position' in keep: key.Position = (self.SpaceInverse * self.RestPose.Space) * key.Position
+                if 'rotation' in keep: key.Rotation = (self.RestPose.Rotation * glm.inverse(self.Rotation)) * key.Rotation
+                if 'scale' in keep: key.Scale = (self.RestPose.Scale / self.Scale) * key.Scale
 
         # write rest pose
         self.RestPose.Position = self.Position
@@ -208,7 +208,7 @@ class Joint(Transform):
         # recursion
         if recursive:
             for child in self.Children:
-                child.writeRestPose(recursive=True, updateKeyframes=updateKeyframes)
+                child.writeRestPose(recursive=True, keep=keep)
 
         return self
 
@@ -313,14 +313,95 @@ class Joint(Transform):
     def clearChildren(self, keep: list[str] = ['position', 'rotation', 'scale']) -> "Joint":
         return super().clearChildren(keep=keep)
 
-    def applyPosition(self, position: glm.vec3 = None, recursive: bool = False) -> "Joint":
-        return super().applyPosition(position, recursive)
+    def applyPosition(self, position: glm.vec3 = None, recursive: bool = False, includeParentChange: list[Pose] = [], includeChildrenChange: list[Pose] = []) -> "Transform":
+        return super().applyPosition(position, recursive, includeParentChange, includeChildrenChange)
 
-    def applyRotation(self, rotation: glm.quat = None, recursive: bool = False) -> "Joint":
-        return super().applyRotation(rotation, recursive)
+    def applyRestposePosition(self, position: glm.vec3 = None, recursive: bool = False) -> "Joint":
+        """"Resets the position of the Restpose to (0,0,0) or adds the given position.
 
-    def appyScale(self, scale: glm.vec3 = None, recursive: bool = False) -> "Joint":
-        return super().appyScale(scale, recursive)
+        - This will load the restpose and overwrites the current pose of the transform!
+        - You may want to call `loadPose` after this one or store the current properties.
+        - Updates its keyframes position ONLY. Rotation and scale will be unchanged.
+        - Updates its children Restposes positions to be spatially unchanged.
+        - This does not update the childrens keyframes.
+
+        Returns itself.
+        """
+        self.loadRestPose(recursive=False)
+        for child in self.Children:
+            child.loadRestPose(recursive=False)
+
+        self.applyPosition(position=position, recursive=False)
+
+        self.writeRestPose(recursive=False, keep=None)
+        for child in self.Children:
+            child.writeRestPose(recursive=False, keep=None)
+
+        if recursive:
+            for child in self.Children:
+                child.applyRestposePosition(position, recursive=True)
+
+        return self
+
+    def applyRotation(self, rotation: glm.quat = None, recursive: bool = False, includeParentChange: list[Pose] = [], includeChildrenChange: list[Pose] = []) -> "Transform":
+        return super().applyRotation(rotation, recursive, includeParentChange, includeChildrenChange)
+
+    def applyRestposeRotation(self, rotation: glm.quat = None, recursive: bool = False) -> "Joint":
+        """"Resets the rotation of the Restpose to (1,0,0,0) or adds the given rotation.
+
+        - This will load the restpose and overwrites the current pose of the transform!
+        - You may want to call `loadPose` after this one or store the current properties.
+        - Updates its keyframes position ONLY. Rotation and scale will be unchanged.
+        - Updates its children Restposes position and rotation to be spatially unchanged.
+        - This does not update the childrens keyframes.
+
+        Returns itself.
+        """
+        self.loadRestPose(recursive=False)
+        for child in self.Children:
+            child.loadRestPose(recursive=False)
+
+        self.applyRotation(rotation=rotation, recursive=False)
+
+        self.writeRestPose(recursive=False, keep=['position'])
+        for child in self.Children:
+            child.writeRestPose(recursive=False, keep=None)
+
+        if recursive:
+            for child in self.Children:
+                child.applyRestposeRotation(rotation, recursive=True)
+
+        return self
+
+    def applyScale(self, scale: glm.vec3 = None, recursive: bool = False, includeParentChange: list[Pose] = [], includeChildrenChange: list[Pose] = []) -> "Transform":
+        return super().appyScale(scale, recursive, includeParentChange, includeChildrenChange)
+
+    def applyRestposeScale(self, scale: glm.vec3 = None, recursive: bool = False) -> "Joint":
+        """"Resets the scale of the Restpose to (1,1,1) or adds the given scale.
+
+        - This will load the restpose and overwrites the current pose of the transform!
+        - You may want to call `loadPose` after this one or store the current properties.
+        - Updates its keyframes position ONLY. Rotation and scale will be unchanged.
+        - Updates its children Restposes position and scale to be spatially unchanged.
+        - This does not update the childrens keyframes.
+
+        Returns itself.
+        """
+        self.loadRestPose(recursive=False)
+        for child in self.Children:
+            child.loadRestPose(recursive=False)
+
+        self.applyScale(scale=scale, recursive=False)
+
+        self.writeRestPose(recursive=False, keep=['position'])
+        for child in self.Children:
+            child.writeRestPose(recursive=False, keep=None)
+
+        if recursive:
+            for child in self.Children:
+                child.applyRestposeScale(scale, recursive=True)
+
+        return self
 
     def setEuler(self, degrees: glm.vec3, order: str = 'ZXY', extrinsic: bool = True) -> "Joint":
         return super().setEuler(degrees, order, extrinsic)

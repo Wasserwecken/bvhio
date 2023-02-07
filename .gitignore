@@ -2,5 +2,4 @@
 .VSCodeCounter/
 dist/
 **__pycache__/
-test.ipynb
 test.bvh

@@ -4,7 +4,11 @@
 [![Publish Main](https://github.com/Wasserwecken/bvhio/actions/workflows/publish_main.yml/badge.svg?branch=main)](https://github.com/Wasserwecken/bvhio/actions)
 [![Publish Preview](https://github.com/Wasserwecken/bvhio/actions/workflows/publish_preview.yml/badge.svg?branch=preview)](https://test.pypi.org/project/bvhio/)
 <a href="https://www.buymeacoffee.com/ericdolch"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" height="20px"></a>
+
+
 # bvhio
+> **:warning: This is under active development!** There might be a lot of bugs. Please create an issue if you find some!
+
 Lightweight libary for reading, editing and creating [Biovision .bvh](https://research.cs.wisc.edu/graphics/Courses/cs-838-1999/Jeff/BVH.html) files. Deserializes files into a hierarchical spatial structure like transforms in Unity or Unreal.
 
 Data for each joint is provided in local and world space and does support modifing the hierarchy itself without losing the keyframe data. The spatial structure does also allow for editing the motion or rest pose data. This libary supports also deserializing and serialising .bvh files into a simplified structure that represents the key data from the file.
