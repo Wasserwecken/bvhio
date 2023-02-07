@@ -128,7 +128,7 @@ class Reading(unittest.TestCase):
 
     def test_KeyframeRange(self):
         for j, i, d in self.instance.layout():
-            self.assertEqual(j.getKeyframeRange(), self.joints[i][3])
+            self.assertEqual(j.getKeyframeRange(includeChildren=True), self.joints[i][3])
 
     def test_PositionsRestPose(self):
         for j, i, d in self.instance.loadRestPose(recursive=True).layout():

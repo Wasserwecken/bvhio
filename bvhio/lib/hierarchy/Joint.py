@@ -264,22 +264,20 @@ class Joint(Transform):
 
         return self
 
-    def getKeyframeRange(self, includeChildren: bool = False) -> tuple[int, int]:
+    def getKeyframeRange(self, includeChildren: bool = True) -> tuple[int, int]:
         """Returns the earliest and latest frame id of the animation.
 
-        - If there are no keyframes, `(-1, -1)` is returned.
+        - If there are no keyframes, `(0, 0)` is returned.
         - If includeChildren is True -> The range considers the earliest and latest frames from its children too.
 
         The tuple layout is -> [FirstFrameId, LastFrameId]"""
-        if len(self.Keyframes) == 0: return (-1, -1)
-
+        if len(self.Keyframes) == 0: return (0, 0)
         range = (self.Keyframes[0][0], self.Keyframes[-1][0])
 
         if includeChildren:
             for child in self.Children:
                 childRange = child.getKeyframeRange(includeChildren=True)
-                range[0] = min(range[0], childRange[0])
-                range[1] = max(range[1], childRange[1])
+                range = (min(range[0], childRange[0]), max(range[1], childRange[1]))
 
         return range
 
