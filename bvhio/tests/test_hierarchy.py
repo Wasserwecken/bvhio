@@ -169,7 +169,7 @@ class Methods(unittest.TestCase):
         animPose = [(joint.PositionWorld, joint.RotationWorld, joint.ScaleWorld) for joint, _ , _ in instance.layout()]
 
         instance.loadRestPose(recursive=True)
-        instance.writeRestPose(recursive=True, updateKeyframes=False)
+        instance.writeRestPose(recursive=True, keep=None)
         instance.loadRestPose(recursive=True)
         for j, i, d in instance.layout():
             self.assertGreater(1e-04, deviationPosition(restPose[i][0], j.PositionWorld))
@@ -182,7 +182,7 @@ class Methods(unittest.TestCase):
             self.assertGreater(1e-04, deviationScale(animPose[i][2], j.ScaleWorld))
 
         instance.loadRestPose(recursive=True)
-        instance.writeRestPose(recursive=True, updateKeyframes=True)
+        instance.writeRestPose(recursive=True, keep=['position', 'rotation', 'scale'])
         instance.loadRestPose(recursive=True)
         for j, i, d in instance.layout():
             self.assertGreater(1e-04, deviationPosition(restPose[i][0], j.PositionWorld))

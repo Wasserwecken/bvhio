@@ -79,7 +79,7 @@ for joint, index, depth in root.layout():
 #    +- RightLowLeg
 #       +- RightFoot
 
-# Rest pose position and Y-direction of each joint in world space 
+# Rest pose position and Y-direction of each joint in world space
 # vec3(            0,            0,            0 ) vec3(            0,            1,            0 ) Hips
 # vec3(            0,         5.21,            0 ) vec3(            0,     0.997333,    0.0729792 ) Chest
 # vec3(            0,        23.86,  1.19209e-07 ) vec3(            0,            1,            0 ) Neck
@@ -98,6 +98,7 @@ for joint, index, depth in root.layout():
 # vec3(        -3.91,            0,            0 ) vec3(            0,           -1,            0 ) RightUpLeg
 # vec3(        -3.91,       -17.63,            0 ) vec3(            0,           -1,            0 ) RightLowLeg
 # vec3(        -3.91,       -34.77,            0 ) vec3(            0,           -1,            0 ) RightFoot
+
 ```
 
 ### Read bvh as simple structure
@@ -142,7 +143,7 @@ joint = hierarchy.filter('Head')[0]
 
 # Some methods and properties have been added to work with keyframe and joint data
 joint.Keyframes         # list of local animation data
-joint.readPose(0)        # sets the transform data to a specific keyframe
+joint.loadPose(0)        # sets the transform data to a specific keyframe
 joint.writePose(0)       # writes the current transform data into a keyframe
 joint.roll(0)            # changes the rotation of a bone around its own axis without affcting the children
 
@@ -154,7 +155,7 @@ joint.attach()
 joint.detach()
 joint.applyPosition()
 joint.applyRotation()
-joint.appyScale()
+joint.applyScale()
 ```
 
 ### Interacting with joints and animation
@@ -165,43 +166,50 @@ import bvhio
 root = bvhio.readAsHierarchy('bvhio/tests/example.bvh')
 
 # Add a root bone to the hierarchy and set itself as 'root'.
-root = bvhio.Joint('Root').attach(root)
+root = bvhio.Joint('Root').attach(root, keep=['position', 'rotation', 'scale'])
 
 # Scale so the data represent roughly meters, assuming the data is in inches.
 # Because the scale is on the root and the rest pose, it is applied to all world space data.
-# Keep in mind that local keyframe and child rest pose data is still in inches!
 root.RestPose.Scale = 0.0254
+
+# this bakes the rest pos scale of 0.0254 into the positions,
+# so that the scale can be reseted to 1 again.
+root.applyRestposeScale(recursive=True, bakeKeyframes=True)
+
+# tursn the animation by 180 degrees.
+# Keep in mind that local keyframe and child rest pose data is still untouched.
+root.RestPose.addEuler((0, 180, 0))
 
 # Set all joints to the first keyframe.
 # The animation pose is calculated by -> Pose = RestPose + Keyframe.
 root.loadPose(0)
 
 # print info
-print('\nPosition, Y-direction and local scale of each joint in world space ')
+print('\nPosition and Y-direction of each joint in world space ')
 for joint, index, depth in root.layout():
-    print(f'{joint.PositionWorld} {joint.UpWorld} {joint.Scale} {joint.Name}')
+    print(f'{joint.PositionWorld} {joint.UpWorld} {joint.Name}')
 
 # --------------------------- OUTPUT ---------------------------
-# Position, Y-direction and local scale of each joint in world space 
-# vec3(            0,            0,            0 ) vec3(            0,            1,            0 ) vec3(       0.0254,       0.0254,       0.0254 ) Root
-# vec3(     0.203962,     0.889254,      2.24434 ) vec3(    0.0575125,     0.965201,     0.255108 ) vec3(            1,            1,            1 ) Hips
-# vec3(     0.211573,      1.01698,       2.2781 ) vec3(    0.0481175,     0.852046,    -0.521251 ) vec3(            1,            1,            1 ) Chest
-# vec3(     0.232768,      1.43762,      2.06126 ) vec3(     0.163858,     0.314978,    -0.934847 ) vec3(            1,            1,            1 ) Neck
-# vec3(     0.255451,      1.48122,      1.93185 ) vec3(     0.136333,     0.863658,    -0.485292 ) vec3(            1,            1,            1 ) Head
-# vec3(     0.203905,      1.36171,      2.04548 ) vec3(    -0.967669,     0.251636,    0.0172419 ) vec3(            1,            1,            1 ) LeftCollar
-# vec3(    0.0677382,      1.39712,      2.04791 ) vec3(    -0.901112,     0.170623,    -0.398605 ) vec3(            1,            1,            1 ) LeftUpArm
-# vec3(    -0.206005,      1.44895,      1.92682 ) vec3(     0.212169,    -0.689802,    -0.692213 ) vec3(            1,            1,            1 ) LeftLowArm
-# vec3(    -0.152491,      1.27497,      1.75223 ) vec3(      0.21588,    -0.681081,    -0.699661 ) vec3(            1,            1,            1 ) LeftHand
-# vec3(     0.260678,       1.3607,      2.04907 ) vec3(     0.953783,     0.278612,      0.11258 ) vec3(            1,            1,            1 ) RightCollar
-# vec3(     0.407731,      1.40366,      2.06643 ) vec3(     0.992285,     0.105528,   -0.0650799 ) vec3(            1,            1,            1 ) RightUpArm
-# vec3(     0.705642,      1.43534,      2.04689 ) vec3(     0.105734,     0.764633,    -0.635733 ) vec3(            1,            1,            1 ) RightLowArm
-# vec3(     0.734244,      1.64218,      1.87492 ) vec3(     0.117056,     0.781042,    -0.613409 ) vec3(            1,            1,            1 ) RightHand
-# vec3(     0.108093,      0.88812,      2.27025 ) vec3(    -0.182967,    -0.963474,     0.195551 ) vec3(            1,            1,            1 ) LeftUpLeg
-# vec3(    0.0228602,     0.439299,      2.36134 ) vec3(   -0.0743765,    -0.450022,     0.889915 ) vec3(            1,            1,            1 ) LeftLowLeg
-# vec3(  -0.00995459,      0.24075,      2.75397 ) vec3(   -0.0859881,    -0.463928,      0.88169 ) vec3(            1,            1,            1 ) LeftFoot
-# vec3(     0.299831,     0.890388,      2.21844 ) vec3(     0.170185,    -0.858689,    -0.483414 ) vec3(            1,            1,            1 ) RightUpLeg
-# vec3(      0.37604,     0.505865,      2.00197 ) vec3(     0.135822,     -0.89424,     0.426482 ) vec3(            1,            1,            1 ) RightLowLeg
-# vec3(     0.435171,     0.116553,      2.18764 ) vec3(     0.188425,    -0.981787,    0.0242779 ) vec3(            1,            1,            1 ) RightFoot
+# Position and Y-direction of each joint in world space
+# vec3(            0,            0,            0 ) vec3(            0,            1,            0 ) Root
+# vec3(    -0.203962,     0.889254,     -2.24434 ) vec3(   -0.0575126,     0.965201,    -0.255108 ) Hips
+# vec3(    -0.211573,      1.01698,      -2.2781 ) vec3(   -0.0481175,     0.852046,     0.521251 ) Chest
+# vec3(    -0.232769,      1.43762,     -2.06126 ) vec3(    -0.163858,     0.314978,     0.934847 ) Neck
+# vec3(    -0.255451,      1.48122,     -1.93185 ) vec3(    -0.136333,     0.863658,     0.485292 ) Head
+# vec3(    -0.203905,      1.36171,     -2.04548 ) vec3(     0.967669,     0.251636,   -0.0172419 ) LeftCollar
+# vec3(   -0.0677384,      1.39712,     -2.04791 ) vec3(     0.901112,     0.170623,     0.398605 ) LeftUpArm
+# vec3(     0.206005,      1.44895,     -1.92682 ) vec3(    -0.212169,    -0.689803,     0.692213 ) LeftLowArm
+# vec3(     0.152491,      1.27497,     -1.75223 ) vec3(     -0.21588,    -0.681082,     0.699661 ) LeftHand
+# vec3(    -0.260679,       1.3607,     -2.04907 ) vec3(    -0.953783,     0.278612,     -0.11258 ) RightCollar
+# vec3(    -0.407731,      1.40366,     -2.06643 ) vec3(    -0.992285,     0.105528,    0.0650799 ) RightUpArm
+# vec3(    -0.705642,      1.43534,     -2.04689 ) vec3(    -0.105734,     0.764633,     0.635733 ) RightLowArm
+# vec3(    -0.734245,      1.64218,     -1.87492 ) vec3(    -0.117056,     0.781042,      0.61341 ) RightHand
+# vec3(    -0.108093,      0.88812,     -2.27025 ) vec3(     0.182967,    -0.963475,    -0.195552 ) LeftUpLeg
+# vec3(   -0.0228604,     0.439299,     -2.36134 ) vec3(    0.0743764,    -0.450022,    -0.889915 ) LeftLowLeg
+# vec3(   0.00995436,      0.24075,     -2.75397 ) vec3(     0.085988,    -0.463928,     -0.88169 ) LeftFoot
+# vec3(    -0.299832,     0.890388,     -2.21844 ) vec3(    -0.170185,    -0.858689,     0.483414 ) RightUpLeg
+# vec3(    -0.376041,     0.505865,     -2.00197 ) vec3(    -0.135822,     -0.89424,    -0.426482 ) RightLowLeg
+# vec3(    -0.435172,     0.116553,     -2.18764 ) vec3(    -0.188425,    -0.981787,    -0.024278 ) RightFoot
 ```
 
 ### Compare pose data
@@ -209,7 +217,7 @@ for joint, index, depth in root.layout():
 import bvhio
 
 root = bvhio.readAsHierarchy('bvhio/tests/example.bvh')
-root = bvhio.Joint('Root', restPose=bvhio.Pose(scale=2.54)).attach(root)
+root = bvhio.Joint('Root', restPose=bvhio.Transform(scale=2.54)).attach(root)
 
 # Load poses, then extract from all joints their position in world space.
 pose0positions = [joint.PositionWorld for (joint, index, depth) in root.loadPose(0).layout()]
@@ -246,10 +254,18 @@ for (joint, index, depth) in root.layout():
 ```python
 import bvhio
 
-
+# load data as simple deserialized structure
 bvhRoot = bvhio.readAsBvh('bvhio/tests/example.bvh').Root
+
+# convert to a joint hierarchy
 hierarchyRoot = bvhio.convertBvhToHierarchy(bvhRoot)
-bvhRoot = bvhio.convertHierarchyToBvh(hierarchyRoot, hierarchyRoot.getKeyframeRange()[1])
+
+# convert them back to simple deserialized structure.
+# the frame count needs to be given, and the max frame id is selected.
+bvhRoot = bvhio.convertHierarchyToBvh(hierarchyRoot, hierarchyRoot.getKeyframeRange()[1] + 1)
+
+# writes the data back into a .bvh file
+bvhio.writeBvh('test.bvh', bvhio.BvhContainer(bvhRoot, len(bvhRoot.Keyframes), 1/30))
 ```
 
 ### Interpolate between keyframes
@@ -311,7 +327,7 @@ for joint in root.filter('LegR'):
 root.writePose(20, recursive=True)
 
 # store the animation
-bvhio.writeHierarchy('test.bvh', root, 1/30)
+bvhio.writeHierarchy('test.bvh', root, 1/30, percision=4)
 
 
 # --------------------------- OUTPUT (.bvh file) ---------------------------
@@ -319,32 +335,32 @@ bvhio.writeHierarchy('test.bvh', root, 1/30)
 # ROOT Root
 # {
 #   OFFSET 0.0 2.0 0.0
-#   CHANNELS 0 
+#   CHANNELS 0
 #   JOINT UpperLegL
 #   {
-#     OFFSET 0.300000012 0.099999905 0.0
+#     OFFSET 0.3 0.1 0.0
 #     CHANNELS 3 Zrotation Xrotation Yrotation
 #     JOINT LowerLegL
 #     {
-#       OFFSET 7e-09 -1.099999905 0.0
+#       OFFSET 0.0 -1.1 0.0
 #       CHANNELS 3 Zrotation Xrotation Yrotation
 #       End Site
 #       {
-#         OFFSET 8.7e-08 -1.0 0.0
+#         OFFSET 0.0 -0.33 0.0
 #       }
 #     }
 #   }
 #   JOINT UpperLegR
 #   {
-#     OFFSET -0.300000012 0.099999905 0.0
+#     OFFSET -0.3 0.1 0.0
 #     CHANNELS 3 Zrotation Xrotation Yrotation
 #     JOINT LowerLegR
 #     {
-#       OFFSET 7e-09 -1.099999905 0.0
+#       OFFSET 0.0 -1.1 0.0
 #       CHANNELS 3 Zrotation Xrotation Yrotation
 #       End Site
 #       {
-#         OFFSET 8.7e-08 -1.0 0.0
+#         OFFSET 0.0 -0.33 0.0
 #       }
 #     }
 #   }
@@ -352,25 +368,26 @@ bvhio.writeHierarchy('test.bvh', root, 1/30)
 # MOTION
 # Frames: 21
 # Frame Time: 0.03333333333333333
-# -7.75e-07 -30.000015259 -2.892e-06 -7.75e-07 -30.000015259 -2.892e-06 -7.75e-07 30.000015259 2.892e-06 -7.75e-07 30.000015259 2.892e-06 
-# -6.1e-07 -26.743696213 -2.528e-06 -6.1e-07 -26.743696213 -2.528e-06 -6.1e-07 26.743696213 2.528e-06 -6.1e-07 26.743696213 2.528e-06 
-# -4.7e-07 -23.57818985 -2.191e-06 -4.7e-07 -23.57818985 -2.191e-06 -4.7e-07 23.57818985 2.191e-06 -4.7e-07 23.57818985 2.191e-06 
-# -3.52e-07 -20.487323761 -1.876e-06 -3.52e-07 -20.487323761 -1.876e-06 -3.52e-07 20.487323761 1.876e-06 -3.52e-07 20.487323761 1.876e-06 
-# -2.54e-07 -17.457611084 -1.579e-06 -2.54e-07 -17.457611084 -1.579e-06 -2.54e-07 17.457611084 1.579e-06 -2.54e-07 17.457611084 1.579e-06 
-# -1.74e-07 -14.477519989 -1.296e-06 -1.74e-07 -14.477519989 -1.296e-06 -1.74e-07 14.477519989 1.296e-06 -1.74e-07 14.477519989 1.296e-06 
-# -1.1e-07 -11.536964417 -1.024e-06 -1.1e-07 -11.536964417 -1.024e-06 -1.1e-07 11.536964417 1.024e-06 -1.1e-07 11.536964417 1.024e-06 
-# -6.1e-08 -8.626930237 -7.61e-07 -6.1e-08 -8.626930237 -7.61e-07 -6.1e-08 8.626930237 7.61e-07 -6.1e-08 8.626930237 7.61e-07 
-# -2.7e-08 -5.739173412 -5.04e-07 -2.7e-08 -5.739173412 -5.04e-07 -2.7e-08 5.739173412 5.04e-07 -2.7e-08 5.739173412 5.04e-07 
-# -7e-09 -2.865985394 -2.51e-07 -7e-09 -2.865985394 -2.51e-07 -7e-09 2.865985394 2.51e-07 -7e-09 2.865985394 2.51e-07 
-# -0.0 0.0 -0.0 -0.0 0.0 -0.0 -0.0 0.0 -0.0 -0.0 0.0 -0.0 
-# -7e-09 2.865985394 2.51e-07 -7e-09 2.865985394 2.51e-07 -7e-09 -2.865985394 -2.51e-07 -7e-09 -2.865985394 -2.51e-07 
-# -2.7e-08 5.739173889 5.04e-07 -2.7e-08 5.739173889 5.04e-07 -2.7e-08 -5.739173889 -5.04e-07 -2.7e-08 -5.739173889 -5.04e-07 
-# -6.1e-08 8.626929283 7.61e-07 -6.1e-08 8.626929283 7.61e-07 -6.1e-08 -8.626929283 -7.61e-07 -6.1e-08 -8.626929283 -7.61e-07 
-# -1.1e-07 11.536964417 1.024e-06 -1.1e-07 11.536964417 1.024e-06 -1.1e-07 -11.536964417 -1.024e-06 -1.1e-07 -11.536964417 -1.024e-06 
-# -1.74e-07 14.477519989 1.296e-06 -1.74e-07 14.477519989 1.296e-06 -1.74e-07 -14.477519989 -1.296e-06 -1.74e-07 -14.477519989 -1.296e-06 
-# -2.54e-07 17.457611084 1.579e-06 -2.54e-07 17.457611084 1.579e-06 -2.54e-07 -17.457611084 -1.579e-06 -2.54e-07 -17.457611084 -1.579e-06 
-# -3.52e-07 20.487323761 1.876e-06 -3.52e-07 20.487323761 1.876e-06 -3.52e-07 -20.487323761 -1.876e-06 -3.52e-07 -20.487323761 -1.876e-06 
-# -4.7e-07 23.57818985 2.191e-06 -4.7e-07 23.57818985 2.191e-06 -4.7e-07 -23.57818985 -2.191e-06 -4.7e-07 -23.57818985 -2.191e-06 
-# -6.1e-07 26.743696213 2.528e-06 -6.1e-07 26.743696213 2.528e-06 -6.1e-07 -26.743696213 -2.528e-06 -6.1e-07 -26.743696213 -2.528e-06 
-# -7.75e-07 30.000015259 2.892e-06 -7.75e-07 30.000015259 2.892e-06 -7.75e-07 -30.000015259 -2.892e-06 -7.75e-07 -30.000015259 -2.892e-06 
+# -0.0 -30.0 -0.0 -0.0 -30.0 -0.0 -0.0 30.0 0.0 -0.0 30.0 0.0
+# -0.0 -26.7437 -0.0 -0.0 -26.7437 -0.0 -0.0 26.7437 0.0 -0.0 26.7437 0.0
+# -0.0 -23.5782 -0.0 -0.0 -23.5782 -0.0 -0.0 23.5782 0.0 -0.0 23.5782 0.0
+# -0.0 -20.4873 -0.0 -0.0 -20.4873 -0.0 -0.0 20.4873 0.0 -0.0 20.4873 0.0
+# -0.0 -17.4576 -0.0 -0.0 -17.4576 -0.0 -0.0 17.4576 0.0 -0.0 17.4576 0.0
+# -0.0 -14.4775 -0.0 -0.0 -14.4775 -0.0 -0.0 14.4775 0.0 -0.0 14.4775 0.0
+# -0.0 -11.537 -0.0 -0.0 -11.537 -0.0 -0.0 11.537 0.0 -0.0 11.537 0.0
+# -0.0 -8.6269 -0.0 -0.0 -8.6269 -0.0 -0.0 8.6269 0.0 -0.0 8.6269 0.0
+# -0.0 -5.7392 -0.0 -0.0 -5.7392 -0.0 -0.0 5.7392 0.0 -0.0 5.7392 0.0
+# -0.0 -2.866 -0.0 -0.0 -2.866 -0.0 -0.0 2.866 0.0 -0.0 2.866 0.0
+# -0.0 0.0 -0.0 -0.0 0.0 -0.0 -0.0 0.0 -0.0 -0.0 0.0 -0.0
+# -0.0 2.866 0.0 -0.0 2.866 0.0 -0.0 -2.866 -0.0 -0.0 -2.866 -0.0
+# -0.0 5.7392 0.0 -0.0 5.7392 0.0 -0.0 -5.7392 -0.0 -0.0 -5.7392 -0.0
+# -0.0 8.6269 0.0 -0.0 8.6269 0.0 -0.0 -8.6269 -0.0 -0.0 -8.6269 -0.0
+# -0.0 11.537 0.0 -0.0 11.537 0.0 -0.0 -11.537 -0.0 -0.0 -11.537 -0.0
+# -0.0 14.4775 0.0 -0.0 14.4775 0.0 -0.0 -14.4775 -0.0 -0.0 -14.4775 -0.0
+# -0.0 17.4576 0.0 -0.0 17.4576 0.0 -0.0 -17.4576 -0.0 -0.0 -17.4576 -0.0
+# -0.0 20.4873 0.0 -0.0 20.4873 0.0 -0.0 -20.4873 -0.0 -0.0 -20.4873 -0.0
+# -0.0 23.5782 0.0 -0.0 23.5782 0.0 -0.0 -23.5782 -0.0 -0.0 -23.5782 -0.0
+# -0.0 26.7437 0.0 -0.0 26.7437 0.0 -0.0 -26.7437 -0.0 -0.0 -26.7437 -0.0
+# -0.0 30.0 0.0 -0.0 30.0 0.0 -0.0 -30.0 -0.0 -0.0 -30.0 -0.0
+
 ```

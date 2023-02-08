@@ -259,6 +259,12 @@ def writeBvh(path: str, bvh: BvhContainer, percision: int = 9) -> None:
 
 
 def writeHierarchy(path: str, root: Joint, frameTime: float, frames: int = None, percision: int = 9) -> None:
+    """Creates an .bvh file from the given hierarchy.
+    - frameTime defines the FPS
+    - IF frames is None -> THe whole animation is written.
+    - If frames is set -> The Animation is written from frame 0 to frame.
+    - percision limits the percision of floating numbers be written.
+    - Data will be overwritten if the file already exists"""
     frames = (root.getKeyframeRange()[1] + 1) if frames is None else frames
     container = BvhContainer(convertHierarchyToBvh(root, frames + 1), frames, frameTime)
     writeBvh(path, container, percision)

@@ -36,8 +36,8 @@ class Joint(Transform):
     @Keyframes.setter
     def Keyframes(self, value: list[tuple[int, Transform]]) -> None:
         self._Keyframes = list(value)
-        self.RestPose.clearChildren()
-        self.RestPose.attach(*self.Keyframes, keep=[None])
+        self.RestPose.clearChildren(keep=[None])
+        self.RestPose.attach(*[key for frame, key in value], keep=[None])
 
     @property
     def RestPose(self) -> Transform:
@@ -70,7 +70,11 @@ class Joint(Transform):
         - If there are no keyframes, the joint propetries will not change.
         - If the frame id is out of the keyframe length, the nearest keyframe propetires are used.
         - If the frame id is between two keyframes, pose properties are linearly interpolated."""
-        if len(self.Keyframes) == 0: return Transform(name=f'Key {frame} (placeholder)')
+        if len(self.Keyframes) == 0:
+            key = Transform(name=f'Key {frame} (placeholder)')
+            self.RestPose.duplicate(recursive=False).attach(key, keep=None)
+            return key
+
         if frame < 0: frame = max(0, self.getKeyframeRange(includeChildren=False)[1] + 1 - frame)
 
         # pose definition
@@ -340,7 +344,7 @@ class Joint(Transform):
         - This does not update the childrens keyframes.
         - If bake is True -> The childrens Restposes will change in position ONLY.
         - If bakeKeyframes is True -> Updates its keyframes position ONLY.
-        
+
         Returns itself.
         """
         change, changeInverse = self.RestPose._applyScaleGetChanges(scale)
