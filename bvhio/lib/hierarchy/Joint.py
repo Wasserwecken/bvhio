@@ -158,7 +158,7 @@ class Joint(Transform):
 
         if recursive:
             for child in self.Children:
-                child.removeKeyframe(frame=frame, recursive=True)
+                child.loadKeyframe(frame=frame, recursive=True)
 
         return self
 
