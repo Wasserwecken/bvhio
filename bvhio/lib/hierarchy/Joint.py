@@ -145,7 +145,7 @@ class Joint(Transform):
 
         return self
 
-    def loadKeyframe(self, frame: int, recsive: bool = True) -> "Joint":
+    def loadKeyframe(self, frame: int, recursive: bool = True) -> "Joint":
         """Loads the pose at the given frame into the transforms properties.
         - This is the animation data without rest pose.
 
@@ -155,6 +155,10 @@ class Joint(Transform):
         self.Position = key.Position
         self.Rotation = key.Rotation
         self.Scale = key.Scale
+
+        if recursive:
+            for child in self.Children:
+                child.removeKeyframe(frame=frame, recursive=True)
 
         return self
 
