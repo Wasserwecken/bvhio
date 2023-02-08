@@ -128,6 +128,7 @@ class Joint(Transform):
     def removeKeyframe(self, frame: int, recursive: bool = False) -> "Joint":
         """Removes the keyframe, if it exists, from the keyframe list.
         - If recursive is True -> Child joints do also load their rest pose.
+
         Returns itself."""
         index = bisect.bisect_left([key[0] for key in self.Keyframes], frame)
 
@@ -140,9 +141,23 @@ class Joint(Transform):
 
         return self
 
+    def loadKeyframe(self, frame: int, recsive: bool = True) -> "Joint":
+        """Loads the pose at the given frame into the transforms properties.
+        - This is the animation data without rest pose.
+
+        Returns itself."""
+        key = self.getKeyframe(frame)
+
+        self.Position = key.Position
+        self.Rotation = key.Rotation
+        self.Scale = key.Scale
+
+        return self
+
     def loadRestPose(self, recursive: bool = True) -> "Joint":
         """Sets joint properties to the rest pose.
         - If recursive is True -> Child joints do also load their rest pose.
+
         Returns itself."""
         # self alignment
         self.Position = self.RestPose.Position
@@ -161,6 +176,7 @@ class Joint(Transform):
         - If keep contains properties -> The Keyframes are modified to keep its spatial algiment in world space.
         - If keep is None or empty -> Keyframes do not change and thus the animation will change.
         - If recursive is True -> Child joints do also load their rest pose.
+
         Returns itself."""
         # remove change in rest pose from keyframes
         if keep:
@@ -188,6 +204,7 @@ class Joint(Transform):
         - If the frame id is out of the keyframe length, the nearest keyframe propetires are used.
         - If the frame id is between two keyframes, pose properties are linearly interpolated.
         - If recursive is True -> Child joints do also load their pose.
+
         Returns itself."""
         # get animation data
         key = self.getKeyframe(frame)
@@ -211,6 +228,7 @@ class Joint(Transform):
         - Inserts a new keyframe if there is none yet.
         - If the frame number is negative, it counts as the n-th frame from the end.
         - If recursive is True -> Child joints do also write their pose.
+
         Returns itself."""
         # add keyframe
         self.setKeyframe(frameId, pose=self, keep=['position', 'rotation', 'scale'])
@@ -240,6 +258,7 @@ class Joint(Transform):
     def roll(self, degrees: float, recursive: bool = False) -> "Joint":
         """Rotates the joint along its local Y axis and updates the children so there is no spatial change.
         - RestPose and Keyframe data are not modified.
+
         Returns itself.
         """
         change = glm.angleAxis(glm.radians(degrees), (0, 1, 0))
@@ -277,6 +296,7 @@ class Joint(Transform):
         - Updates its keyframes position ONLY. Rotation and scale will be unchanged.
         - Updates its children Restposes positions to be spatially unchanged.
         - This does not update the childrens keyframes.
+
         Returns itself.
         """
         change, changeInverse = self.RestPose._applyPositionGetChanges(position)
@@ -298,6 +318,7 @@ class Joint(Transform):
         - This does not update the childrens keyframes.
         - If bake is True -> The childrens Restposes will change in position ONLY.
         - If bakeKeyframes is True -> Updates its keyframes position ONLY.
+
         Returns itself.
         """
         change, changeInverse = self.RestPose._applyRotationGetChanges(rotation)
@@ -319,6 +340,7 @@ class Joint(Transform):
         - This does not update the childrens keyframes.
         - If bake is True -> The childrens Restposes will change in position ONLY.
         - If bakeKeyframes is True -> Updates its keyframes position ONLY.
+        
         Returns itself.
         """
         change, changeInverse = self.RestPose._applyScaleGetChanges(scale)
