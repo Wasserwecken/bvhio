@@ -145,16 +145,16 @@ class Joint(Transform):
 
         return self
 
-    def loadKeyframe(self, frame: int, recursive: bool = True) -> "Joint":
+    def loadKeyframe(self, frame: int, recursive: bool = True, use: bool = ['position', 'rotation', 'scale']) -> "Joint":
         """Loads the pose at the given frame into the transforms properties.
         - This is the animation data without rest pose.
 
         Returns itself."""
         key = self.getKeyframe(frame)
 
-        self.Position = key.Position
-        self.Rotation = key.Rotation
-        self.Scale = key.Scale
+        if 'position' in use: self.Position = key.Position
+        if 'rotation' in use: self.Rotation = key.Rotation
+        if 'scale' in use: self.Scale = key.Scale
 
         if recursive:
             for child in self.Children:
@@ -162,15 +162,15 @@ class Joint(Transform):
 
         return self
 
-    def loadRestPose(self, recursive: bool = True) -> "Joint":
+    def loadRestPose(self, recursive: bool = True, use: bool = ['position', 'rotation', 'scale']) -> "Joint":
         """Sets joint properties to the rest pose.
         - If recursive is True -> Child joints do also load their rest pose.
 
         Returns itself."""
         # self alignment
-        self.Position = self.RestPose.Position
-        self.Rotation = self.RestPose.Rotation
-        self.Scale = self.RestPose.Scale
+        if 'position' in use: self.Position = self.RestPose.Position
+        if 'rotation' in use: self.Rotation = self.RestPose.Rotation
+        if 'scale' in use: self.Scale = self.RestPose.Scale
 
         # recursion
         if recursive:
@@ -205,7 +205,7 @@ class Joint(Transform):
 
         return self
 
-    def loadPose(self, frame: int, recursive: bool = True) -> "Joint":
+    def loadPose(self, frame: int, recursive: bool = True, use: bool = ['position', 'rotation', 'scale']) -> "Joint":
         """Sets joint properties to the animation at the given frame id. The animation is defined as 'Pose = RestPose + Keyframe'.
         - If the frame number is negative, it will look for the n-th frame from the end.
         - If there are no keyframes, the joint propetries will not change.
@@ -219,9 +219,9 @@ class Joint(Transform):
 
         # set animation pose, world space includes the transform from the rest pose
         self._CurrentFrame = frame
-        self.Position = key.PositionWorld
-        self.Rotation = key.RotationWorld
-        self.Scale = key.ScaleWorld
+        if 'position' in use: self.Position = key.PositionWorld
+        if 'rotation' in use: self.Rotation = key.RotationWorld
+        if 'scale' in use: self.Scale = key.ScaleWorld
 
         # may do it recursively
         if recursive:
