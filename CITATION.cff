@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: "You may want to cite this software like below."
+title: "Read, write, edit and create .bvh files with hierarchical 3D transforms"
+date-released: 2022-12-17
+version: 1.2.13
+authors:
+  - family-names: Dolch
+    given-names: Eric
+repository-code: "https://github.com/Wasserwecken/bvhio"
