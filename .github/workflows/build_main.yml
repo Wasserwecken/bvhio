@@ -1,4 +1,4 @@
-name: Publish Main
+name: Build Main
 
 on:
   push:
