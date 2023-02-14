@@ -158,7 +158,7 @@ class Joint(Transform):
 
         if recursive:
             for child in self.Children:
-                child.loadKeyframe(frame=frame, recursive=True)
+                child.loadKeyframe(frame=frame, recursive=True, use=use)
 
         return self
 
@@ -175,7 +175,7 @@ class Joint(Transform):
         # recursion
         if recursive:
             for child in self.Children:
-                child.loadRestPose(recursive=True)
+                child.loadRestPose(recursive=True, use=use)
 
         return self
 
@@ -226,7 +226,7 @@ class Joint(Transform):
         # may do it recursively
         if recursive:
             for child in self.Children:
-                child.loadPose(frame, recursive=True)
+                child.loadPose(frame, recursive=True, use=use)
 
         return self
 
