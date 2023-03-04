@@ -11,6 +11,9 @@ Lightweight libary for reading, editing and creating [Biovision .bvh](https://re
 
 Data for each joint is provided in local and world space and does support modifing the hierarchy itself without losing the keyframe data. The spatial structure does also allow for editing the motion or rest pose data. This libary supports also deserializing and serialising .bvh files into a simplified structure that represents the key data from the file.
 
+> :warning: **Slow processing of data**: Unfortunatly, because the libary is written purley in python and due to excessive use of recursive methods, the performance is very slow for animations with more than 500 keyframes. It can take minutes to load animations with more than 5k keyframes.
+ I would like to improve the perfromance by using big numpy arrays in the future, but aint got time yet.
+
 ## Install
 ``` batch
 pip install bvhio

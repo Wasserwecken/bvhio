@@ -18,7 +18,7 @@ def parseLine(file: TextIOWrapper, lineNumber: int) -> tuple[int, list[str], tup
     return (lineNumber, tokens, debugInfo)
 
 
-def readAsBvh(path: str) -> BvhContainer:
+def readAsBvh(path: str, loadKeyFrames: bool = True) -> BvhContainer:
     """Deserialize .bvh file into a simple structure."""
     if not os.path.exists(path):
         raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), path)
@@ -56,9 +56,10 @@ def readAsBvh(path: str) -> BvhContainer:
             bvh.FrameTime = _deserializeFrameTime(tokens[2:], debugInfo)
 
         # parse motion data
-        for _ in range(bvh.FrameCount):
-            line, tokens, debugInfo = parseLine(file, line)
-            _deserializeMotion(bvh.Root, _deserializeKeyframe(tokens, debugInfo))
+        if loadKeyFrames:
+            for _ in range(bvh.FrameCount):
+                line, tokens, debugInfo = parseLine(file, line)
+                _deserializeMotion(bvh.Root, _deserializeKeyframe(tokens, debugInfo))
 
         return bvh
 
@@ -120,9 +121,9 @@ def convertHierarchyToBvh(joint: Joint, frames: int, worldSpace: Pose = Pose()) 
     return bvh
 
 
-def readAsHierarchy(path: str) -> Joint:
+def readAsHierarchy(path: str, loadKeyFrames: bool = True) -> Joint:
     """Deserialize a .bvh file into a joint hierarchy."""
-    return convertBvhToHierarchy(readAsBvh(path).Root).loadRestPose(recursive=True)
+    return convertBvhToHierarchy(readAsBvh(path, loadKeyFrames).Root).loadRestPose(recursive=True)
 
 
 def _parseJoint(file: TextIOWrapper, name: str, line: int = 0) -> BvhJoint:
