@@ -1,9 +1,10 @@
+import errno
 import os
+from io import TextIOWrapper
+from typing import Optional
+
 import glm
 import numpy
-import errno
-
-from io import TextIOWrapper
 from SpatialTransform import Euler, Pose, Transform
 
 from .bvh import *
@@ -91,8 +92,12 @@ def convertBvhToHierarchy(bvh: BvhJoint) -> Joint:
     return joint
 
 
-def convertHierarchyToBvh(joint: Joint, frames: int, worldSpace: Pose = Pose()) -> BvhJoint:
+def convertHierarchyToBvh(joint: Joint, frames: int, worldSpace: Optional[Pose] = None) -> BvhJoint:
     """Converts a joint structure into a deseralized bvh structure."""
+
+    if worldSpace is None:
+        worldSpace = Pose()
+
     bvh = BvhJoint(joint.Name)
     bvh.Offset = worldSpace.Space * joint.RestPose.Position
     bvh.EndSite = (worldSpace.Space * (0, 1, 0)) * glm.length(joint.RestPose.Position) * 0.3

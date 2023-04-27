@@ -36,6 +36,7 @@ class Joint(Transform):
     @Keyframes.setter
     def Keyframes(self, value: list[tuple[int, Transform]]) -> None:
         self._Keyframes = list(value)
+        self._KeyframeMap = {frame: key for frame, key in self._Keyframes}
         self.RestPose.clearChildren(keep=[None])
         self.RestPose.attach(*[key for frame, key in value], keep=[None])
 
@@ -62,7 +63,21 @@ class Joint(Transform):
 
         self._RestPose: Transform = Transform(name='RestPose') if restPose is None else restPose
         self._Keyframes: list[tuple[int, Transform]] = [] if keyFrames is None else keyFrames
+        self._KeyframeMap = {frame: key for frame, key in self._Keyframes}
         self._CurrentFrame = -1
+
+    def __findFrameIndex(self, frame: int):
+        if not self.Keyframes:
+            return 0
+
+        if frame > self.Keyframes[-1][0]:
+            return len(self.Keyframes)
+               
+        return bisect.bisect_left([key[0] for key in self.Keyframes], frame)
+
+    def __insertKeyframe(self, frame: int, key: Transform) -> None:
+        bisect.insort(self.Keyframes, (frame, key))
+        self._KeyframeMap[frame] = key
 
     def getKeyframe(self, frame: int) -> Transform:
         """Returns the pose at the given frame id.
@@ -77,8 +92,13 @@ class Joint(Transform):
 
         if frame < 0: frame = max(0, self.getKeyframeRange(includeChildren=False)[1] + 1 - frame)
 
+        existingFrame = self._KeyframeMap.get(frame)
+
+        if existingFrame:
+            return existingFrame
+        
         # pose definition
-        index = bisect.bisect_left([key[0] for key in self.Keyframes], frame)
+        index = self.__findFrameIndex(frame)
         if index == len(self.Keyframes):
             # index is bigger than last frame, take last key
             return self.Keyframes[-1][1]
@@ -111,11 +131,11 @@ class Joint(Transform):
         - If the frame number is negative, it counts as the n-th frame from the end.
         - This pose is added later to the rest pose to calculate the final animation."""
         if frame < 0: frame = max(0, self.getKeyframeRange(includeChildren=False)[1] + 1 - frame)
-        index = bisect.bisect_left([key[0] for key in self.Keyframes], frame)
+        index = self.__findFrameIndex(frame)
 
         if index == len(self.Keyframes) or self.Keyframes[index][0] != frame:
             newKey = Transform(name=f'Key {frame}', position=pose.Position, rotation=pose.Rotation, scale=pose.Scale)
-            bisect.insort(self.Keyframes, (frame, newKey))
+            self.__insertKeyframe(frame, newKey)
             self.RestPose.attach(newKey, keep=keep)
         else:
             if 'position' in keep: self.Keyframes[index][1].PositionWorld = pose.Position
@@ -134,7 +154,7 @@ class Joint(Transform):
         - If recursive is True -> Child joints do also load their rest pose.
 
         Returns itself."""
-        index = bisect.bisect_left([key[0] for key in self.Keyframes], frame)
+        index = self.__findFrameIndex(frame)
 
         if index != len(self.Keyframes) and self.Keyframes[index][0] == frame:
             self.Keyframes.pop(index)[1].clearParent(keep=None)
