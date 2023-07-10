@@ -15,7 +15,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    'numpy==1.23.1',
+    'numpy',
     'PyGLM==2.7.0',
     'spatial-transform==1.2.13',
 ]
