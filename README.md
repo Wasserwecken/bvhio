@@ -22,7 +22,8 @@ This libary is a side product of my master thesis, in order to extract convenien
 ## Notes
 - The package [spatial-transform](https://github.com/Wasserwecken/spatial-transform) is used as base object for joints and provides the most properties and methods.
 - The package [PyGLM](https://github.com/Zuzu-Typ/PyGLM) is used for matrix, quaternion and vector calculations.
-- Same coordination space as [openGL and GLM](https://www.evl.uic.edu/ralph/508S98/coordinates.html) is used. Which is: Right-Handed, where Y+ is up, Z- is forward and positive rotations are counter clockwise.
+- Same coordination space as [openGL and GLM](https://www.evl.uic.edu/ralph/508S98/coordinates.html) is used, which is right-handed, where Y+ is up and Z- is forward.
+- Positive rotations are counter clockwise when viewed from the origin looking in the positive direction.
 
 ## Features
 - Read/Write/Edit
