@@ -43,6 +43,28 @@ This libary is a side product of my master thesis, in order to extract convenien
 
 
 ## Examples
+
+### Read bvh as simple structure and modify channels
+```python
+import bvhio
+# Loads the file into a deserialized tree structure.
+bvh = bvhio.readAsBvh('bvhio/tests/example.bvh')
+
+# Iterate through joints for changes
+for joint, index, depth in bvh.Root.layout():
+
+    # Keep positons for the hip
+    joint.Channels = ['Xposition', 'Yposition', 'Zposition'] if joint.Name == "Hips" else []
+
+    # Set order for euler rotations
+    # Bvhio will calculate the correct euler angles.
+    # Partially given channels are also uspported.
+    joint.Channels.extend(['Zrotation', 'Yrotation', 'Xrotation'])
+
+# Stores the modified bvh
+bvhio.writeBvh('test.bvh', bvh, percision=6)
+```
+
 ### Read bvh as transform hierarchy
 ```python
 import bvhio
@@ -100,7 +122,7 @@ for joint, index, depth in root.layout():
 
 ```
 
-### Read bvh as simple structure
+### Bvh deserialized properties and methods
 ```python
 import bvhio
 
