@@ -306,6 +306,33 @@ for joint, index, depth in root.layout():
 bvhio.writeHierarchy('test.bvh', root, 1/30)
 ```
 
+
+### Merge BVH files
+```python
+
+# THIS WILL ONLY WORKs IF THE REST POSE IS THE SAME!
+# You cannot merge different skeletons / hierarchies.
+import bvhio
+
+# load data
+file1 = bvhio.readAsBvh('bvhio/tests/example.bvh')
+file2 = bvhio.readAsBvh('bvhio/tests/example.bvh')
+
+# get hierarchy of both files
+data1 = file1.Root.layout()
+data2 = file2.Root.layout()
+
+# append the animation to the end of the original one
+for joint, index, _ in data1:
+    joint.Keyframes.extend(data2[index][0].Keyframes)
+
+# update framecount to write all animation
+file1.FrameCount += file2.FrameCount
+
+bvhio.writeBvh('test.bvh', file1, 4)
+```
+
+
 ### Create/build animations from code
 ```python
 import bvhio
