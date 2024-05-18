@@ -16,7 +16,7 @@ classifiers = [
 ]
 dependencies = [
     'numpy',
-    'PyGLM==2.7.0',
+    'PyGLM==2.7.1',
     'spatial-transform==1.2.13',
 ]
 
