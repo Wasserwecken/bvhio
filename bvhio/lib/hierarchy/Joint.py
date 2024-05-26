@@ -302,12 +302,10 @@ class Joint(Transform):
 
         return self
 
-    def attach(self, *nodes: "Joint", keep: list[str] = ['position', 'rotation', 'scale']) -> "Joint":
+    def attach(self, *nodes: "Joint", keep: list[str] = ['position', 'rotation', 'scale', 'anim']) -> "Joint":
         super().attach(*nodes, keep=keep)
 
-        self.RestPose.attach([node.RestPose for node in nodes], keep=keep)
-
-        if 'anim' in keep:
+        if keep is not None and 'anim' in keep:
             root = self
             while root.Parent is not None:
                 root = self.Parent
@@ -326,10 +324,7 @@ class Joint(Transform):
     def detach(self, *nodes: "Joint", keep: list[str] = ['position', 'rotation', 'scale', 'anim']) -> "Joint":
         super().detach(*nodes, keep=keep)
 
-        for node in nodes:
-            node.RestPose.clearParent(keep=keep)
-
-        if 'anim' in keep:
+        if keep is not None and 'anim' in keep:
             root = self
             while root.Parent is not None:
                 root = self.Parent

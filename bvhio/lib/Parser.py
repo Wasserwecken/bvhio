@@ -68,7 +68,7 @@ def readAsBvh(path: str, loadKeyFrames: bool = True) -> BvhContainer:
 def convertBvhToHierarchy(bvh: BvhJoint) -> Joint:
     """Converts a deserialized bvh structure into a joint hierarchy."""
     # copy data into a joint
-    restPose = Transform(name='RestPose', position=bvh.Offset, rotation=bvh.getRotation())
+    restPose = Transform(name=f'RestPose.{bvh.Name}', position=bvh.Offset, rotation=bvh.getRotation())
     joint = Joint(bvh.Name, restPose=restPose)
     for frame, key in enumerate(bvh.Keyframes):
         joint.setKeyframe(frame, Transform.fromPose(key), keep=None)
