@@ -320,9 +320,9 @@ class Joint(Transform):
                     node.writeRestPose(recursive=False)
 
             if 'anim' in keep:
-                for frame in [index for index, _ in node.Keyframes]:
-                    root.loadPose(frame, recursive=True)
-                    for node in nodes:
+                for node in nodes:
+                    for frame in [index for index, _ in node.Keyframes]:
+                        root.loadPose(frame, recursive=True)
                         node.loadPose(frame, recursive=True)
                         if 'position' in keep: node.Position = self.SpaceWorldInverse * node.Position
                         if 'rotation' in keep: node.Rotation = self.RotationWorldInverse * node.Rotation
@@ -349,9 +349,9 @@ class Joint(Transform):
                     node.writeRestPose(recursive=False)
 
             if 'anim' in keep:
-                for frame in [index for index, _ in node.Keyframes]:
-                    root.loadPose(frame, recursive=True)
-                    for node in nodes:
+                for node in nodes:
+                    for frame in [index for index, _ in node.Keyframes]:
+                        root.loadPose(frame, recursive=True)
                         node.loadPose(frame, recursive=True)
                         if 'position' in keep: node.Position = self.SpaceWorld * node.Position
                         if 'rotation' in keep: node.Rotation = self.RotationWorld * node.Rotation
