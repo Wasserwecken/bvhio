@@ -289,6 +289,26 @@ bvhRoot = bvhio.convertHierarchyToBvh(hierarchyRoot, hierarchyRoot.getKeyframeRa
 bvhio.writeBvh('test.bvh', bvhio.BvhContainer(bvhRoot, len(bvhRoot.Keyframes), 1/30))
 ```
 
+### Isolate joints from the hierachy (remove root joint)
+```python
+import bvhio
+
+# load data
+root = bvhio.readAsHierarchy('bvhio/tests/example.bvh')
+
+# get the joint to isolate.
+# if there is a root joint you want to remove,
+# you probably want to filter for the hips.
+chest = root.filter('Chest')[0]
+
+# detach the joint from the parent and set a new root
+# the restpose and keyframes are modified for this joint to match the original animation
+root = chest.clearParent(keep=['position', 'rotation', 'scale', 'rest', 'anim'])
+
+# store the subhierarchy as own file
+bvhio.writeHierarchy('test.bvh', root, 1/30)
+```
+
 ### Interpolate between keyframes
 ```python
 import bvhio

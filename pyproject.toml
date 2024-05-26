@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "bvhio"
-version = "1.4.2"
+version = "1.4.3"
 authors = [ { name="Wasserwecken", email="author@example.com" }, ]
 description = "Read, write, edit and create .bvh files with hierarchical 3D transforms."
 readme = "README.md"
