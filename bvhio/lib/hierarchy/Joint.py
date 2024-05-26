@@ -302,48 +302,68 @@ class Joint(Transform):
 
         return self
 
-    def attach(self, *nodes: "Joint", keep: list[str] = ['position', 'rotation', 'scale', 'anim']) -> "Joint":
+    def attach(self, *nodes: "Joint", keep: list[str] = ['position', 'rotation', 'scale', 'rest', 'anim']) -> "Joint":
         super().attach(*nodes, keep=keep)
 
-        if keep is not None and 'anim' in keep:
+        if keep is not None and ('anim' in keep or 'rest' in keep):
             root = self
             while root.Parent is not None:
                 root = self.Parent
 
-            for frame in range(*root.getKeyframeRange()):
-                root.loadPose(frame, recursive=True)
+            if 'rest' in keep:
+                root.loadRestPose(recursive=True)
                 for node in nodes:
-                    node.loadPose(frame, recursive=True)
-                    node.Position = self.SpaceWorldInverse * node.Position
-                    node.Rotation = self.RotationWorldInverse * node.Rotation
-                    node.Scale = self.ScaleWorldInverse * node.Scale
-                    node.writePose(frame, recursive=False)
+                    node.loadRestPose(recursive=True)
+                    if 'position' in keep: node.Position = self.SpaceWorldInverse * node.Position
+                    if 'rotation' in keep: node.Rotation = self.RotationWorldInverse * node.Rotation
+                    if 'scale' in keep: node.Scale = self.ScaleWorldInverse * node.Scale
+                    node.writeRestPose(recursive=False)
+
+            if 'anim' in keep:
+                for frame in range(*root.getKeyframeRange()):
+                    root.loadPose(frame, recursive=True)
+                    for node in nodes:
+                        node.loadPose(frame, recursive=True)
+                        if 'position' in keep: node.Position = self.SpaceWorldInverse * node.Position
+                        if 'rotation' in keep: node.Rotation = self.RotationWorldInverse * node.Rotation
+                        if 'scale' in keep: node.Scale = self.ScaleWorldInverse * node.Scale
+                        node.writePose(frame, recursive=False)
 
         return self
 
-    def detach(self, *nodes: "Joint", keep: list[str] = ['position', 'rotation', 'scale', 'anim']) -> "Joint":
-        super().detach(*nodes, keep=keep)
+    def detach(self, *nodes: "Joint", keep: list[str] = ['position', 'rotation', 'scale', 'rest', 'anim']) -> "Joint":
+        super().detach(*nodes)
 
-        if keep is not None and 'anim' in keep:
+        if keep is not None and ('anim' in keep or 'rest' in keep):
             root = self
             while root.Parent is not None:
                 root = self.Parent
 
-            for frame in range(*root.getKeyframeRange()):
-                root.loadPose(frame, recursive=True)
+            if 'rest' in keep:
+                root.loadRestPose(recursive=True)
                 for node in nodes:
-                    node.loadPose(frame, recursive=True)
-                    node.Position = self.SpaceWorld * node.Position
-                    node.Rotation = self.RotationWorld * node.Rotation
-                    node.Scale = self.ScaleWorld * node.Scale
-                    node.writePose(frame, recursive=False)
+                    node.loadRestPose(recursive=True)
+                    if 'position' in keep: node.Position = self.SpaceWorld * node.Position
+                    if 'rotation' in keep: node.Rotation = self.RotationWorld * node.Rotation
+                    if 'scale' in keep: node.Scale = self.ScaleWorld * node.Scale
+                    node.writeRestPose(recursive=False)
+
+            if 'anim' in keep:
+                for frame in range(*root.getKeyframeRange()):
+                    root.loadPose(frame, recursive=True)
+                    for node in nodes:
+                        node.loadPose(frame, recursive=True)
+                        if 'position' in keep: node.Position = self.SpaceWorld * node.Position
+                        if 'rotation' in keep: node.Rotation = self.RotationWorld * node.Rotation
+                        if 'scale' in keep: node.Scale = self.ScaleWorld * node.Scale
+                        node.writePose(frame, recursive=False)
 
         return self
 
-    def clearParent(self, keep: list[str] = ['position', 'rotation', 'scale', 'anim']) -> "Joint":
+    def clearParent(self, keep: list[str] = ['position', 'rotation', 'scale', 'rest', 'anim']) -> "Joint":
         return super().clearParent(keep=keep)
 
-    def clearChildren(self, keep: list[str] = ['position', 'rotation', 'scale', 'anim']) -> "Joint":
+    def clearChildren(self, keep: list[str] = ['position', 'rotation', 'scale', 'rest', 'anim']) -> "Joint":
         return super().clearChildren(keep=keep)
 
     def applyPosition(self, position: glm.vec3 = None, recursive: bool = False) -> "Joint":
