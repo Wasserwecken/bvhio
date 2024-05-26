@@ -2,4 +2,4 @@
 .VSCodeCounter/
 dist/
 **__pycache__/
-test.bvh
+*.bvh
