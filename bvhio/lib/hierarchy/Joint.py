@@ -90,10 +90,10 @@ class Joint(Transform):
             self.RestPose.duplicate(recursive=False).attach(key, keep=None)
             return key
 
-        if frame < 0: frame = max(0, self.getKeyframeRange(includeChildren=False)[1] + 1 - frame)
+        if frame < 0:
+            frame = max(0, self.getKeyframeRange(includeChildren=False)[1] + 1 - frame)
 
         existingFrame = self._KeyframeMap.get(frame)
-
         if existingFrame:
             return existingFrame
 
@@ -320,7 +320,7 @@ class Joint(Transform):
                     node.writeRestPose(recursive=False)
 
             if 'anim' in keep:
-                for frame in range(*root.getKeyframeRange()):
+                for frame in [index for index, _ in node.Keyframes]:
                     root.loadPose(frame, recursive=True)
                     for node in nodes:
                         node.loadPose(frame, recursive=True)
@@ -349,7 +349,7 @@ class Joint(Transform):
                     node.writeRestPose(recursive=False)
 
             if 'anim' in keep:
-                for frame in range(*root.getKeyframeRange()):
+                for frame in [index for index, _ in node.Keyframes]:
                     root.loadPose(frame, recursive=True)
                     for node in nodes:
                         node.loadPose(frame, recursive=True)
