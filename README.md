@@ -7,9 +7,9 @@
 
 # bvhio
 
-Lightweight libary for reading, editing and creating [Biovision .bvh](https://research.cs.wisc.edu/graphics/Courses/cs-838-1999/Jeff/BVH.html) files. Deserializes files into a hierarchical spatial structure like transforms in Unity or Unreal.
+Lightweight library for reading, editing and creating [Biovision .bvh](https://research.cs.wisc.edu/graphics/Courses/cs-838-1999/Jeff/BVH.html) files. Deserializes files into a hierarchical spatial structure like transforms in Unity or Unreal.
 
-Data for each joint is provided in local and world space and does support modifing the hierarchy itself without losing the keyframe data. The spatial structure does also allow for editing the motion or rest pose data. This libary supports also deserializing and serialising .bvh files into a simplified structure that represents the key data from the file.
+Data for each joint is provided in local and world space and does support modifying the hierarchy itself without losing the keyframe data. The spatial structure does also allow for editing the motion or rest pose data. This library supports also deserializing and serialising .bvh files into a simplified structure that represents the key data from the file.
 
 ## Install
 ``` batch
@@ -17,7 +17,7 @@ pip install bvhio
  ```
 
 ## Why and intention
-This libary is a side product of my master thesis, in order to extract conveniently local and world data features from a humanoid skeleton hierarchy. I could not find any libary that could do that, without bloat or the features I required for extraction or modification.
+This library is a side product of my master thesis, in order to extract conveniently local and world data features from a humanoid skeleton hierarchy. I could not find any library that could do that, without bloat or the features I required for extraction or modification.
 
 ## Notes
 - The package [spatial-transform](https://github.com/Wasserwecken/spatial-transform) is used as base object for joints and provides the most properties and methods.
@@ -32,7 +32,7 @@ This libary is a side product of my master thesis, in order to extract convenien
     - Animation data can be modified with both methods.
     - The transform hierarchy allows for easy modifications of rest and motion data.
 - Animation
-    - Supports modifing keyframe, rest positon and final pose data.
+    - Supports modifying keyframe, rest position and final pose data.
     - Supports joint special modifications, like changing the joint-roll
     - Keyframes are stored in local space and as difference to the rest pose.
     - Keyframes support Position, Rotation and Scale.
@@ -53,12 +53,12 @@ bvh = bvhio.readAsBvh('bvhio/tests/example.bvh')
 # Iterate through joints for changes
 for joint, index, depth in bvh.Root.layout():
 
-    # Keep positons for the hip
+    # Keep positions for the hip
     joint.Channels = ['Xposition', 'Yposition', 'Zposition'] if joint.Name == "Hips" else []
 
     # Set order for euler rotations
     # Bvhio will calculate the correct euler angles.
-    # Partially given channels are also uspported.
+    # Partially given channels are also supported.
     joint.Channels.extend(['Zrotation', 'Yrotation', 'Xrotation'])
 
 # Stores the modified bvh
@@ -155,7 +155,7 @@ bvh.Root.getTip()
 ```python
 import bvhio
 
-# The 'Joint' object allows for reading and modifing animations.
+# The 'Joint' object allows for reading and modifying animations.
 # Most of the functionality is based on the package 'spatial-transform'.
 hierarchy = bvhio.readAsHierarchy('bvhio/tests/example.bvh')
 
@@ -166,9 +166,9 @@ joint = hierarchy.filter('Head')[0]
 joint.Keyframes         # list of local animation data
 joint.loadPose(0)        # sets the transform data to a specific keyframe
 joint.writePose(0)       # writes the current transform data into a keyframe
-joint.roll(0)            # changes the rotation of a bone around its own axis without affcting the children
+joint.roll(0)            # changes the rotation of a bone around its own axis without affecting the children
 
-# Some methods do also update the keyframes to no destroy the animation data
+# Some methods do also update the keyframes to not destroy the animation data
 # Please refer to the package 'spatial-transform' for their behaviour
 joint.clearParent()
 joint.clearChildren()
@@ -183,7 +183,7 @@ joint.applyScale()
 ```python
 import bvhio
 
-# The package allows to make modifcation on the animation data very conviniently.
+# The package allows to make modification on the animation data very conveniently.
 root = bvhio.readAsHierarchy('bvhio/tests/example.bvh')
 
 # Add a root bone to the hierarchy and set itself as 'root'.
@@ -302,7 +302,7 @@ root = bvhio.readAsHierarchy('bvhio/tests/example.bvh')
 chest = root.filter('Chest')[0]
 
 # detach the joint from the parent and set a new root
-# the restpose and keyframes are modified for this joint to match the original animation
+# the rest pose and keyframes are modified for this joint to match the original animation
 root = chest.clearParent(keep=['position', 'rotation', 'scale', 'rest', 'anim'])
 
 # store the subhierarchy as own file
@@ -317,7 +317,7 @@ import bvhio
 root = bvhio.readAsHierarchy('bvhio/tests/example.bvh')
 
 # scales the frame id of the two given frames.
-# this will restult in the ids 0 and 100.
+# this will result in the ids 0 and 100.
 # frames without keyframe are linearly interpolated.
 for joint, index, depth in root.layout():
     joint.Keyframes = [(frame * 100, key) for frame, key in joint.Keyframes]
@@ -330,7 +330,7 @@ bvhio.writeHierarchy('test.bvh', root, 1/30)
 ### Merge BVH files
 ```python
 
-# THIS WILL ONLY WORKs IF THE REST POSE IS THE SAME!
+# THIS WILL ONLY WORK IF THE REST POSE IS THE SAME!
 # You cannot merge different skeletons / hierarchies.
 import bvhio
 
