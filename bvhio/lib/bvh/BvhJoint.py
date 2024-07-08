@@ -47,7 +47,9 @@ class BvhJoint:
 
     def getRotation(self) -> glm.quat:
         """calculate the bone rotation based on the tip."""
-        dir = glm.normalize(self.getTip())
+        tip = self.getTip()
+        if glm.length(tip) < 1e-6:
+            return glm.quat(1, 0, 0, 0)
         axs = glm.vec3(0, 1, 0)
         dot = glm.dot(axs, dir)
 
