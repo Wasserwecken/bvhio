@@ -35,11 +35,13 @@ class BvhJoint:
         children = len(self.Children)
 
         if children == 1:
-            return self.Children[0].Offset
+            tip = self.Children[0].Offset
         elif children > 1:
-            return sum(child.Offset for child in self.Children) / children
+            tip = sum(child.Offset for child in self.Children) / children
         else:
-            return self.EndSite if glm.length(self.EndSite) > 0.001 else glm.vec3(0, 1, 0)
+            tip = self.EndSite if glm.length(self.EndSite) > 0.001 else glm.vec3(0, 1, 0)
+
+        return tip if glm.length2(tip) > 0.001 else glm.vec3(0, 1, 0)
 
     def getLength(self) -> float:
         """Length of the bone which is based on the tip."""
