@@ -39,7 +39,7 @@ class BvhJoint:
         elif children > 1:
             tip = sum(child.Offset for child in self.Children) / children
         else:
-            tip = self.EndSite if glm.length(self.EndSite) > 0.001 else glm.vec3(0, 1, 0)
+            tip = self.EndSite
 
         return tip if glm.length2(tip) > 0.001 else glm.vec3(0, 1, 0)
 
