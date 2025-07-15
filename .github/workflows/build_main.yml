@@ -5,40 +5,52 @@ on:
     branches:
       - 'main'
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
-  build:
+  publish-to-pypi:
     runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      id-token: write
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version: ${{ matrix.python-version }}
 
-      - name: Install environment dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install flake8
           python -m pip install build
+          python -m pip install .
 
-      - name: Install project dependencies
-        run: python -m pip install .
-
-      - name: Lint with flake8
+      - name: Stop on syntax problems
         run: |
-          # stop the build if there are Python syntax errors or undefined names
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
-      - name: Test with unittest
-        run: python -m unittest discover ./bvhio/tests
+      - name: Run tests
+        run: python -m unittest discover -s bvhio -p "test_*.py" -v
 
       - name: Build package
         run: python -m build
 
-      - name: Publish package PyPI
+      - name: Build package
+        run: |
+          python -m build
+
+      - name: Publish to TestPyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
+          verbose: true
