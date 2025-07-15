@@ -1,8 +1,6 @@
 [![PyPI version](https://badge.fury.io/py/bvhio.svg)](https://pypi.python.org/pypi/bvhio/)
 [![PyPI download month](https://img.shields.io/pypi/dm/bvhio.svg)](https://pypi.python.org/pypi/bvhio/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Build Main](https://github.com/Wasserwecken/bvhio/actions/workflows/build_main.yml/badge.svg?branch=main)](https://github.com/Wasserwecken/bvhio/actions)
-[![Build Preview](https://github.com/Wasserwecken/bvhio/actions/workflows/build_preview.yml/badge.svg?branch=preview)](https://test.pypi.org/project/bvhio/)
 <a href="https://www.buymeacoffee.com/ericdolch"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" height="20px"></a>
 
 # bvhio
