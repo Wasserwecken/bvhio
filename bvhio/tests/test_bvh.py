@@ -1,7 +1,7 @@
 import unittest
 import bvhio
 import glm
-from utils import *
+from .utils import *
 
 class Container(unittest.TestCase):
     def setUp(self):

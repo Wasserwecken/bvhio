@@ -1,7 +1,7 @@
 import unittest
 import bvhio
 import glm
-from utils import *
+from .utils import *
 
 Joints = [ # for j, i, d in root.layout(): print(f"( {d}, {len(j.Children)}, {len(j.Keyframes)}, {j.KeyframeRange}, '{j.Name}', ),")
     ( 0, 3, 2, (0, 1), 'Hips', ),
