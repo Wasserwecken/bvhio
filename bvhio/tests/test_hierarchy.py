@@ -230,13 +230,29 @@ class Methods(unittest.TestCase):
 
         self.assertTrue(True)
 
-    def test_detach(self):
+    def test_detachAndDetach(self):
         instance = bvhio.readAsHierarchy('bvhio/tests/example.bvh')
-        leftCollar = instance.filter('LeftCollar')[0]
-        leftCollar.clearParent(keep=['position', 'rotation', 'scale', 'anim'])
-        leftCollar.loadPose(0, recursive=True)
         instance.loadPose(0, recursive=True)
 
+        leftCollar = instance.filter('LeftCollar')[0]
+        chest = leftCollar.Parent
+
+        leftCollar.clearParent()
+
+        self.assertGreater(1e-03, deviationPosition(chest.PositionWorld, Pose0World[1][0]))
+        self.assertGreater(1e-05, deviationQuaternion(chest.RotationWorld, Pose0World[1][1]))
+        self.assertGreater(1e-06,  glm.length(chest.ScaleWorld - Pose0World[1][2]))
+        for j, i, d in leftCollar.layout():
+            i += 4
+            self.assertGreater(1e-03, deviationPosition(j.PositionWorld, Pose0World[i][0]))
+            self.assertGreater(1e-05, deviationQuaternion(j.RotationWorld, Pose0World[i][1]))
+            self.assertGreater(1e-06,  glm.length(j.ScaleWorld - Pose0World[i][2]))
+
+        chest.attach(leftCollar)
+
+        self.assertGreater(1e-03, deviationPosition(chest.PositionWorld, Pose0World[1][0]))
+        self.assertGreater(1e-05, deviationQuaternion(chest.RotationWorld, Pose0World[1][1]))
+        self.assertGreater(1e-06,  glm.length(chest.ScaleWorld - Pose0World[1][2]))
         for j, i, d in leftCollar.layout():
             i += 4
             self.assertGreater(1e-03, deviationPosition(j.PositionWorld, Pose0World[i][0]))
