@@ -13,8 +13,15 @@ from .hierarchy import *
 
 def parseLine(file: TextIOWrapper, lineNumber: int) -> tuple[int, list[str], tuple[TextIOWrapper, int, int, str]]:
     lineNumber += 1
-    line = file.readline()
-    tokens = line.strip().split()
+    tokens: list[str] = []
+
+    try:
+        while len(tokens) < 1:
+            line = file.readline()
+            tokens = line.strip().split()
+    except StopIteration:
+        pass
+
     debugInfo = (file, lineNumber, len(line) - len(line.lstrip()) + len(tokens[0]), line)
     return (lineNumber, tokens, debugInfo)
 
