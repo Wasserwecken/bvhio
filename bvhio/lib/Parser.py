@@ -12,11 +12,11 @@ from .hierarchy import *
 
 
 def parseLine(file: TextIOWrapper, lineNumber: int) -> tuple[int, list[str], tuple[TextIOWrapper, int, int, str]]:
-    lineNumber += 1
     tokens: list[str] = []
 
     try:
         while len(tokens) < 1:
+            lineNumber += 1
             line = file.readline()
             tokens = line.strip().split()
     except StopIteration:
