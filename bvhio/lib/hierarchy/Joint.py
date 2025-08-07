@@ -125,13 +125,14 @@ class Joint(Transform):
                 )
                 return restPoseCopy.Children[0]
 
-    def setKeyframe(self, frame: int, pose: Transform, keep: list[str] = ['position', 'rotation', 'scale']) -> "Joint":
+    def setKeyframe(self, frame: int, pose: Transform = None, keep: list[str] = ['position', 'rotation', 'scale']) -> "Joint":
         """Inserts the given pose to the the keyframes.
+        - If the pose is none, the current pose of the joint is used as keyframe.
         - If there is already a keyframe at the frame id, it will be overwritten.
-        - If the frame number is negative, it counts as the n-th frame from the end.
-        - This pose is added later to the rest pose to calculate the final animation."""
+        - If the frame number is negative, it counts as the n-th frame from the end."""
         if frame < 0: frame = max(0, self.getKeyframeRange(includeChildren=False)[1] + 1 - frame)
         index = self.__findFrameIndex(frame)
+        pose = (pose or self).duplicate(False)
 
         if index == len(self.Keyframes) or self.Keyframes[index][0] != frame:
             newKey = Transform(name=f'Key {frame}', position=pose.Position, rotation=pose.Rotation, scale=pose.Scale)
@@ -283,6 +284,14 @@ class Joint(Transform):
 
         return range
 
+    def getRootChain(self) -> list["Joint"]:
+        """Returns the all joints up to the root. Order is from root to self. Does not include itself"""
+        chain: list[Joint] = [self]
+        while chain[0].Parent is not None:
+            chain.insert(0, chain[0].Parent)
+        chain.pop(-1)
+        return chain
+
     def roll(self, degrees: float, recursive: bool = False) -> "Joint":
         """Rotates the joint along its local Y axis and updates the children so there is no spatial change.
         - RestPose and Keyframe data are not modified.
@@ -302,68 +311,30 @@ class Joint(Transform):
 
         return self
 
-    def attach(self, *nodes: "Joint", keep: list[str] = ['position', 'rotation', 'scale', 'rest', 'anim']) -> "Joint":
+    def attach(self, *nodes: "Joint", keep: list[str] = ['position', 'rotation', 'scale']) -> "Joint":
+        for node in nodes:
+            restChain = [n.RestPose for n in node.getRootChain()]
+            worldRestSpace = glm.identity(glm.mat4x4)
+            for n in restChain: worldRestSpace *= n.Space
+            node.RestPose._Space = glm.inverse(worldRestSpace) * node.RestPose.Space
+
         super().attach(*nodes, keep=keep)
-
-        if keep is not None and ('anim' in keep or 'rest' in keep):
-            root = self
-            while root.Parent is not None:
-                root = self.Parent
-
-            if 'rest' in keep:
-                root.loadRestPose(recursive=True)
-                for node in nodes:
-                    node.loadRestPose(recursive=True)
-                    if 'position' in keep: node.Position = self.SpaceWorldInverse * node.Position
-                    if 'rotation' in keep: node.Rotation = self.RotationWorldInverse * node.Rotation
-                    if 'scale' in keep: node.Scale = self.ScaleWorldInverse * node.Scale
-                    node.writeRestPose(recursive=False)
-
-            if 'anim' in keep:
-                for node in nodes:
-                    for frame in [index for index, _ in node.Keyframes]:
-                        root.loadPose(frame, recursive=True)
-                        node.loadPose(frame, recursive=True)
-                        if 'position' in keep: node.Position = self.SpaceWorldInverse * node.Position
-                        if 'rotation' in keep: node.Rotation = self.RotationWorldInverse * node.Rotation
-                        if 'scale' in keep: node.Scale = self.ScaleWorldInverse * node.Scale
-                        node.writePose(frame, recursive=False)
-
         return self
 
-    def detach(self, *nodes: "Joint", keep: list[str] = ['position', 'rotation', 'scale', 'rest', 'anim']) -> "Joint":
-        super().detach(*nodes)
+    def detach(self, *nodes: "Joint", keep: list[str] = ['position', 'rotation', 'scale']) -> "Joint":
+        for node in nodes:
+            restChain = [n.RestPose for n in node.getRootChain()]
+            worldRestSpace = glm.identity(glm.mat4x4)
+            for n in restChain: worldRestSpace *= n.Space
+            node.RestPose._Space = worldRestSpace * node.RestPose.Space
 
-        if keep is not None and ('anim' in keep or 'rest' in keep):
-            root = self
-            while root.Parent is not None:
-                root = self.Parent
-
-            if 'rest' in keep:
-                root.loadRestPose(recursive=True)
-                for node in nodes:
-                    node.loadRestPose(recursive=True)
-                    if 'position' in keep: node.Position = self.SpaceWorld * node.Position
-                    if 'rotation' in keep: node.Rotation = self.RotationWorld * node.Rotation
-                    if 'scale' in keep: node.Scale = self.ScaleWorld * node.Scale
-                    node.writeRestPose(recursive=False)
-
-            if 'anim' in keep:
-                for node in nodes:
-                    for frame in [index for index, _ in node.Keyframes]:
-                        root.loadPose(frame, recursive=True)
-                        node.loadPose(frame, recursive=True)
-                        if 'position' in keep: node.Position = self.SpaceWorld * node.Position
-                        if 'rotation' in keep: node.Rotation = self.RotationWorld * node.Rotation
-                        if 'scale' in keep: node.Scale = self.ScaleWorld * node.Scale
-                        node.writePose(frame, recursive=False)
-
+        super().detach(*nodes, keep=keep)
         return self
 
-    def clearParent(self, keep: list[str] = ['position', 'rotation', 'scale', 'rest', 'anim']) -> "Joint":
+    def clearParent(self, keep: list[str] = ['position', 'rotation', 'scale']) -> "Joint":
         return super().clearParent(keep=keep)
 
-    def clearChildren(self, keep: list[str] = ['position', 'rotation', 'scale', 'rest', 'anim']) -> "Joint":
+    def clearChildren(self, keep: list[str] = ['position', 'rotation', 'scale']) -> "Joint":
         return super().clearChildren(keep=keep)
 
     def applyPosition(self, position: glm.vec3 = None, recursive: bool = False) -> "Joint":
